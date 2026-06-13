@@ -1,8 +1,9 @@
 import { getLatestResults } from '@/lib/storage';
-import { SearchButton } from '@/components/SearchButton';
 import type { FlightDeal } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+const ROUTINE_URL = 'https://claude.ai/code/routines/trig_01SGEsfHMZX9WBpDieqm94DQ';
 
 function formatKRW(n: number) {
   return `₩${n.toLocaleString('ko-KR')}`;
@@ -69,17 +70,15 @@ export default async function Dashboard() {
 
   return (
     <main className="min-h-screen max-w-md mx-auto px-4 pb-28 pt-6">
-      {/* 헤더 */}
       <div className="mb-6">
         <h1 className="text-xl font-bold">✈ 항공권 특가</h1>
         {data ? (
           <p className="text-xs text-gray-500 mt-0.5">업데이트 {formatUpdatedAt(data.updatedAt)}</p>
         ) : (
-          <p className="text-xs text-gray-500 mt-0.5">아직 데이터 없음 — 아래 버튼을 눌러 검색하세요</p>
+          <p className="text-xs text-gray-500 mt-0.5">아직 데이터 없음</p>
         )}
       </div>
 
-      {/* 일본 특가 */}
       <section className="mb-8">
         <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
           🇯🇵 일본 특가
@@ -88,13 +87,12 @@ export default async function Dashboard() {
         {!data || data.japanDeals.length === 0 ? (
           <EmptyState message="이번 주기 특가 없음" />
         ) : (
-          data.japanDeals
-            .sort((a, b) => a.price - b.price)
-            .map((deal, i) => <DealCard key={i} deal={deal} threshold={100000} />)
+          data.japanDeals.sort((a, b) => a.price - b.price).map((deal, i) => (
+            <DealCard key={i} deal={deal} threshold={100000} />
+          ))
         )}
       </section>
 
-      {/* 내 휴가 기준 */}
       {data?.vacationSearch && (
         <section className="mb-8">
           <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
@@ -104,14 +102,13 @@ export default async function Dashboard() {
           {data.vacationSearch.flights.length === 0 ? (
             <EmptyState message="해당 기간 검색 결과 없음" />
           ) : (
-            data.vacationSearch.flights
-              .sort((a, b) => a.price - b.price)
-              .map((deal, i) => <DealCard key={i} deal={deal} threshold={200000} />)
+            data.vacationSearch.flights.sort((a, b) => a.price - b.price).map((deal, i) => (
+              <DealCard key={i} deal={deal} threshold={200000} />
+            ))
           )}
         </section>
       )}
 
-      {/* 뉴질랜드 */}
       <section className="mb-8">
         <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
           🇳🇿 뉴질랜드 ICN→AKL
@@ -120,9 +117,9 @@ export default async function Dashboard() {
         {!data || data.nzFlights.length === 0 ? (
           <EmptyState message="검색 결과 없음" />
         ) : (
-          data.nzFlights
-            .sort((a, b) => a.price - b.price)
-            .map((deal, i) => <DealCard key={i} deal={deal} threshold={900000} />)
+          data.nzFlights.sort((a, b) => a.price - b.price).map((deal, i) => (
+            <DealCard key={i} deal={deal} threshold={900000} />
+          ))
         )}
         {data && data.nzFlights.length > 0 && (
           <p className="text-xs text-gray-600 mt-2 text-center">
@@ -131,7 +128,6 @@ export default async function Dashboard() {
         )}
       </section>
 
-      {/* 검색 기준 날짜 */}
       {data && (
         <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 text-xs text-gray-500 mb-4">
           <p className="font-medium text-gray-400 mb-2">검색 기준</p>
@@ -143,7 +139,16 @@ export default async function Dashboard() {
         </div>
       )}
 
-      <SearchButton initialUpdatedAt={data?.updatedAt ?? null} />
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4">
+        <a
+          href={ROUTINE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-center font-bold py-4 rounded-2xl shadow-lg shadow-blue-950 transition"
+        >
+          🔍 지금 검색하기 (claude.ai)
+        </a>
+      </div>
     </main>
   );
 }
