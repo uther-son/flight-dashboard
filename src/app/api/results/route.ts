@@ -9,8 +9,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  // TODO: 인증 재활성화 필요
-  // const secret = process.env.WEBHOOK_SECRET;
+  const secret = 'flightmonitor2026'; // env var 로드 이슈로 하드코딩
+  const authHeader = req.headers.get('authorization');
+  const authQuery = req.nextUrl.searchParams.get('secret');
+  const provided = authHeader?.replace('Bearer ', '').trim() ?? authQuery ?? '';
+  if (provided !== secret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = await req.json() as DashboardData;
   await saveResults(body);
   await updateHistory(body);
