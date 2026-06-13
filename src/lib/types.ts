@@ -10,13 +10,20 @@ export interface FlightDeal {
   url: string;
 }
 
+export interface CalendarEvent {
+  title: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD (inclusive)
+}
+
 export interface DashboardData {
   updatedAt: string;
   searchDates: { plus14: string; plus30: string; plus45: string };
   japanDeals: FlightDeal[];
-  japanAllRoutes?: FlightDeal[]; // 전체 노선 최저가 (추이 추적용)
+  japanAllRoutes?: FlightDeal[];
   vacationSearch: { period: string; flights: FlightDeal[] } | null;
   nzFlights: FlightDeal[];
+  calendarEvents?: CalendarEvent[]; // Google Calendar 휴가 일정
 }
 
 export interface PriceRecord {

@@ -1,5 +1,6 @@
 import { getLatestResults, getHistory } from '@/lib/storage';
 import { PriceTrend } from '@/components/PriceTrend';
+import { TravelCalendar } from '@/components/TravelCalendar';
 import type { FlightDeal } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -158,6 +159,12 @@ export default async function Dashboard() {
           </>
         )}
       </section>
+
+      {/* 추천 여행일자 */}
+      <TravelCalendar
+        calendarEvents={data?.calendarEvents}
+        updatedAt={data?.updatedAt}
+      />
 
       {/* 가격 추이 */}
       <PriceTrend history={history} />
