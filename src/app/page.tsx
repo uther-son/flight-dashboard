@@ -91,20 +91,18 @@ export default async function Dashboard() {
         </a>
       </div>
 
-      {/* 일본 특가 */}
+      {/* 일본 전체 노선 최저가 */}
       <section className="mb-8">
-        <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
-          🇯🇵 일본 특가
-          <span className="text-xs text-gray-500 font-normal">₩100,000 이하</span>
-        </h2>
+        <h2 className="text-base font-semibold mb-1">🇯🇵 일본 노선 최저가</h2>
+        <p className="text-xs text-gray-500 mb-3">🔥 표시 노선은 ₩100,000 이하 — 이메일 알림 발송됨</p>
         {!data ? (
           <EmptyState message="검색 결과가 없습니다. 매일 오전 11시에 자동으로 검색됩니다." />
-        ) : data.japanDeals.length === 0 ? (
-          <EmptyState message="현재 ₩100,000 이하 특가가 없습니다." />
+        ) : (data.japanAllRoutes ?? data.japanDeals).length === 0 ? (
+          <EmptyState message="현재 검색된 항공권이 없습니다." />
         ) : (
-          data.japanDeals.sort((a, b) => a.price - b.price).map((deal, i) => (
-            <DealCard key={i} deal={deal} threshold={100000} />
-          ))
+          (data.japanAllRoutes ?? data.japanDeals)
+            .sort((a, b) => a.price - b.price)
+            .map((deal, i) => <DealCard key={i} deal={deal} threshold={100000} />)
         )}
       </section>
 
