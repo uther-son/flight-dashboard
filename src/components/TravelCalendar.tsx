@@ -126,9 +126,22 @@ export function TravelCalendar({
           캘린더 업데이트 후 표시됩니다.
         </div>
       ) : (
-        allWindows.map((w, i) => (
-          <WindowCard key={i} {...w} />
-        ))
+        allWindows.map((w, i) => {
+          const year = w.start.slice(0, 4);
+          const prevYear = i > 0 ? allWindows[i - 1].start.slice(0, 4) : null;
+          const showYear = year !== prevYear;
+          return (
+            <div key={i}>
+              {showYear && (
+                <div className="flex items-center gap-2 mb-2 mt-1">
+                  <span className="text-xs font-semibold text-gray-600 tracking-widest">{year}</span>
+                  <div className="flex-1 h-px bg-gray-800" />
+                </div>
+              )}
+              <WindowCard {...w} />
+            </div>
+          );
+        })
       )}
     </section>
   );
