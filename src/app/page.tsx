@@ -1,4 +1,5 @@
-import { getLatestResults } from '@/lib/storage';
+import { getLatestResults, getHistory } from '@/lib/storage';
+import { PriceTrend } from '@/components/PriceTrend';
 import type { FlightDeal } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -66,19 +67,31 @@ function EmptyState({ message }: { message: string }) {
 }
 
 export default async function Dashboard() {
-  const data = await getLatestResults();
+  const [data, history] = await Promise.all([getLatestResults(), getHistory()]);
 
   return (
-    <main className="min-h-screen max-w-md mx-auto px-4 pb-28 pt-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold">✈ 항공권 특가</h1>
-        {data ? (
-          <p className="text-xs text-gray-500 mt-0.5">업데이트 {formatUpdatedAt(data.updatedAt)}</p>
-        ) : (
-          <p className="text-xs text-gray-500 mt-0.5">아직 데이터 없음</p>
-        )}
+    <main className="min-h-screen max-w-md mx-auto px-4 pb-10 pt-6">
+      {/* 헤더 */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold">✈ 항공권 특가</h1>
+          {data ? (
+            <p className="text-xs text-gray-500 mt-0.5">업데이트 {formatUpdatedAt(data.updatedAt)}</p>
+          ) : (
+            <p className="text-xs text-gray-500 mt-0.5">매일 오전 11시 자동 검색</p>
+          )}
+        </div>
+        <a
+          href={ROUTINE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:border-gray-500 transition shrink-0"
+        >
+          수동 모니터링 돌리기
+        </a>
       </div>
 
+      {/* 일본 특가 */}
       <section className="mb-8">
         <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
           🇯🇵 일본 특가
@@ -95,6 +108,7 @@ export default async function Dashboard() {
         )}
       </section>
 
+      {/* 내 휴가 기준 */}
       {data?.vacationSearch && (
         <section className="mb-8">
           <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
@@ -111,6 +125,7 @@ export default async function Dashboard() {
         </section>
       )}
 
+      {/* 뉴질랜드 */}
       <section className="mb-8">
         <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
           🇳🇿 뉴질랜드 ICN→AKL
@@ -132,8 +147,12 @@ export default async function Dashboard() {
         )}
       </section>
 
+      {/* 가격 추이 */}
+      <PriceTrend history={history} />
+
+      {/* 검색 기준 */}
       {data && (
-        <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 text-xs text-gray-500 mb-4">
+        <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 text-xs text-gray-500">
           <p className="font-medium text-gray-400 mb-2">검색 기준</p>
           <div className="space-y-1">
             <p>+14일: {data.searchDates.plus14} 출발 (3박)</p>
@@ -142,17 +161,6 @@ export default async function Dashboard() {
           </div>
         </div>
       )}
-
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4">
-        <a
-          href={ROUTINE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-center font-bold py-4 rounded-2xl shadow-lg shadow-blue-950 transition"
-        >
-          🔍 지금 검색하기 (claude.ai)
-        </a>
-      </div>
     </main>
   );
 }

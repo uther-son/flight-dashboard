@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLatestResults, saveResults } from '@/lib/storage';
+import { getLatestResults, saveResults, updateHistory } from '@/lib/storage';
 import type { DashboardData } from '@/lib/types';
 
 export async function GET() {
@@ -16,5 +16,6 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json() as DashboardData;
   await saveResults(body);
+  await updateHistory(body);
   return NextResponse.json({ ok: true });
 }
