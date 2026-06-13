@@ -84,8 +84,10 @@ export default async function Dashboard() {
           🇯🇵 일본 특가
           <span className="text-xs text-gray-500 font-normal">₩100,000 이하</span>
         </h2>
-        {!data || data.japanDeals.length === 0 ? (
-          <EmptyState message="이번 주기 특가 없음" />
+        {!data ? (
+          <EmptyState message="검색 결과가 없습니다. 매일 오전 11시에 자동으로 검색됩니다." />
+        ) : data.japanDeals.length === 0 ? (
+          <EmptyState message="현재 ₩100,000 이하 특가가 없습니다." />
         ) : (
           data.japanDeals.sort((a, b) => a.price - b.price).map((deal, i) => (
             <DealCard key={i} deal={deal} threshold={100000} />
@@ -100,7 +102,7 @@ export default async function Dashboard() {
             <span className="text-xs text-gray-500 font-normal">{data.vacationSearch.period}</span>
           </h2>
           {data.vacationSearch.flights.length === 0 ? (
-            <EmptyState message="해당 기간 검색 결과 없음" />
+            <EmptyState message="해당 기간 검색된 항공권이 없습니다." />
           ) : (
             data.vacationSearch.flights.sort((a, b) => a.price - b.price).map((deal, i) => (
               <DealCard key={i} deal={deal} threshold={200000} />
@@ -114,8 +116,10 @@ export default async function Dashboard() {
           🇳🇿 뉴질랜드 ICN→AKL
           <span className="text-xs text-gray-500 font-normal">2027 · 28박</span>
         </h2>
-        {!data || data.nzFlights.length === 0 ? (
-          <EmptyState message="검색 결과 없음" />
+        {!data ? (
+          <EmptyState message="검색 결과가 없습니다. 매일 오전 11시에 자동으로 검색됩니다." />
+        ) : data.nzFlights.length === 0 ? (
+          <EmptyState message="현재 검색된 항공권이 없습니다." />
         ) : (
           data.nzFlights.sort((a, b) => a.price - b.price).map((deal, i) => (
             <DealCard key={i} deal={deal} threshold={900000} />
