@@ -72,7 +72,7 @@ function RouteCard({ route }: { route: RouteHistory }) {
 export function PriceTrend({ history }: { history: FlightHistory }) {
   // 일본 노선만 (NZ 제외)
   const japanRoutes = Object.values(history)
-    .filter(r => !r.routeId.includes('_202'))
+    .filter(r => r.routeId && !r.routeId.includes('_202'))
     .filter(r => r.records.length > 0)
     .sort((a, b) => {
       const ap = a.records[a.records.length - 1].price;
@@ -81,7 +81,7 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
     });
 
   const nzRoutes = Object.values(history)
-    .filter(r => r.routeId.includes('_202'))
+    .filter(r => r.routeId && r.routeId.includes('_202'))
     .filter(r => r.records.length > 0)
     .sort((a, b) => a.routeId.localeCompare(b.routeId));
 
