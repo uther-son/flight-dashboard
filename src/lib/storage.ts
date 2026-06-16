@@ -112,7 +112,18 @@ export async function getHistory(): Promise<FlightHistory> {
   try {
     const raw = await upstashGet(HISTORY_KEY);
     if (!raw) return {};
-    return JSON.parse(raw) as FlightHistory;
+    const parsed = JSON.parse(raw) as FlightHistory;
+    const cleaned: FlightHistory = {};
+    for (const [key, route] of Object.entries(parsed)) {
+      // 과거 버그로 생성된 쓰레기 항목 제외 (routeId 없음 또는 "undefined" 문자열 포함)
+      if (!route?.routeId || route.routeId.includes('undefined')) continue;
+      const records = (route.records ?? []).filter(
+        r => typeof r?.price === 'number' && !Number.isNaN(r.price) && typeof r?.date === 'string'
+      );
+      if (records.length === 0) continue;
+      cleaned[key] = { ...route, records };
+    }
+    return cleaned;
   } catch {
     return {};
   }
