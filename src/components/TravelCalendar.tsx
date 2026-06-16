@@ -1,7 +1,5 @@
 import type { CalendarEvent } from '@/lib/types';
 
-const ROUTINE_URL = 'https://claude.ai/code/routines/trig_01SGEsfHMZX9WBpDieqm94DQ';
-
 // 한국 공휴일 + 여행 가능 윈도우 (주말 포함 계산)
 const PUBLIC_HOLIDAYS = [
   { label: '광복절', type: 'public', start: '2026-08-13', end: '2026-08-17', nights: 4 },
@@ -113,17 +111,7 @@ export function TravelCalendar({
 
   return (
     <section className="mb-8">
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="text-base font-semibold">📆 추천 여행 일자</h2>
-        <a
-          href={ROUTINE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:border-gray-500 transition"
-        >
-          캘린더 업데이트
-        </a>
-      </div>
+      <h2 className="text-base font-semibold mb-1">📆 추천 여행 일자</h2>
       <p className="text-xs text-gray-500 mb-3">
         Google Calendar 휴가 + 한국 공휴일 기준 · 인접 주말 포함 계산
         {syncedAt && <span className="ml-2 text-gray-600">· 마지막 동기화 {syncedAt}</span>}
