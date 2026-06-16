@@ -80,39 +80,45 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
       <h2 className="text-base font-semibold mb-1">📊 가격 추이</h2>
       <p className="text-xs text-gray-500 mb-3">노선을 선택하면 가격 변화를 확인할 수 있습니다</p>
 
-      <div className="space-y-2 mb-3">
+      <div className="space-y-3 mb-3">
         {japanRoutes.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {japanRoutes.map(r => (
-              <button
-                key={r.routeId}
-                onClick={() => setSelectedId(r.routeId)}
-                className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
-                  r.routeId === selected.routeId
-                    ? 'bg-blue-600 border-blue-600 text-white font-semibold'
-                    : 'border-gray-700 text-gray-400'
-                }`}
-              >
-                {shortLabel(r.routeId)}
-              </button>
-            ))}
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5">🇯🇵 일본</p>
+            <div className="flex flex-wrap gap-1.5">
+              {japanRoutes.map(r => (
+                <button
+                  key={r.routeId}
+                  onClick={() => setSelectedId(r.routeId)}
+                  className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
+                    r.routeId === selected.routeId
+                      ? 'bg-blue-600 border-blue-600 text-white font-semibold'
+                      : 'border-gray-700 text-gray-400'
+                  }`}
+                >
+                  {shortLabel(r.routeId)}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {nzRoutes.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {nzRoutes.map(r => (
-              <button
-                key={r.routeId}
-                onClick={() => setSelectedId(r.routeId)}
-                className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
-                  r.routeId === selected.routeId
-                    ? 'bg-blue-600 border-blue-600 text-white font-semibold'
-                    : 'border-gray-700 text-gray-400'
-                }`}
-              >
-                {shortLabel(r.routeId)}
-              </button>
-            ))}
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5">🇳🇿 뉴질랜드</p>
+            <div className="flex flex-wrap gap-1.5">
+              {nzRoutes.map(r => (
+                <button
+                  key={r.routeId}
+                  onClick={() => setSelectedId(r.routeId)}
+                  className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
+                    r.routeId === selected.routeId
+                      ? 'bg-blue-600 border-blue-600 text-white font-semibold'
+                      : 'border-gray-700 text-gray-400'
+                  }`}
+                >
+                  {shortLabel(r.routeId)}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
