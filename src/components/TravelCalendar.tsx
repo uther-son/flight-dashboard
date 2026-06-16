@@ -24,6 +24,14 @@ function isUpcoming(start: string) {
   return new Date(start) > new Date();
 }
 
+function daysUntil(start: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(start);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
 function WindowCard({ label, type, start, end, nights }: {
   label: string; type: string; start: string; end: string; nights: number;
 }) {
@@ -50,7 +58,7 @@ function WindowCard({ label, type, start, end, nights }: {
         </div>
         <div className="text-right">
           <p className="text-xl font-bold text-white">{nights}박</p>
-          <p className="text-xs text-gray-500">여행 가능</p>
+          <p className="text-xs text-gray-500">D-{daysUntil(start)}</p>
         </div>
       </div>
     </div>

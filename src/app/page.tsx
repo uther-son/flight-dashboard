@@ -1,74 +1,12 @@
 import { getLatestResults, getHistory } from '@/lib/storage';
+import { formatKRW, formatUpdatedAt } from '@/lib/format';
+import { ExpandableDealList } from '@/components/ExpandableDealList';
 import { PriceTrend } from '@/components/PriceTrend';
 import { TravelCalendar } from '@/components/TravelCalendar';
-import type { FlightDeal } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
 const ROUTINE_URL = 'https://claude.ai/code/routines/trig_01SGEsfHMZX9WBpDieqm94DQ';
-
-function formatKRW(n: number) {
-  return `₩${n.toLocaleString('ko-KR')}`;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('ko-KR', {
-    month: 'short', day: 'numeric', weekday: 'short',
-  });
-}
-
-function formatUpdatedAt(iso: string) {
-  return new Date(iso).toLocaleString('ko-KR', {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
-}
-
-const SPECIAL_THRESHOLD = 150000;
-
-function DealCard({ deal }: { deal: FlightDeal }) {
-  const isSpecial = deal.price <= SPECIAL_THRESHOLD;
-  return (
-    <a
-      href={deal.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`block rounded-xl mb-3 transition active:scale-95 overflow-hidden ${
-        isSpecial
-          ? 'ring-2 ring-amber-400 shadow-lg shadow-amber-900/40'
-          : 'border border-gray-800'
-      }`}
-    >
-      {isSpecial && (
-        <div className="bg-amber-400 text-black text-xs font-bold px-4 py-1.5 flex items-center gap-2">
-          <span>🔥 특가 — 이메일 알림 발송됨</span>
-          <span className="ml-auto">{formatKRW(deal.price)}</span>
-        </div>
-      )}
-      <div className={`p-4 flex items-start justify-between gap-2 ${isSpecial ? 'bg-amber-950' : 'bg-gray-900'}`}>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            {deal.direct && <span className="text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full">직항</span>}
-          </div>
-          <p className="font-semibold text-white truncate">{deal.routeName}</p>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {formatDate(deal.departDate)} → {formatDate(deal.returnDate)}
-            <span className="ml-1 text-gray-500">{deal.nights}박</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-1">{deal.airline}</p>
-        </div>
-        <div className="text-right shrink-0">
-          <p className={`text-2xl font-bold tabular-nums ${isSpecial ? 'text-amber-300' : 'text-white'}`}>
-            {formatKRW(deal.price)}
-          </p>
-          <p className="text-xs text-gray-500 mb-2">1인 왕복</p>
-          <span className={`text-xs px-3 py-1 rounded-full ${isSpecial ? 'bg-amber-400 text-black font-bold' : 'bg-blue-600 text-white'}`}>
-            예약하기 →
-          </span>
-        </div>
-      </div>
-    </a>
-  );
-}
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -115,9 +53,10 @@ export default async function Dashboard() {
         ) : (data.japanAllRoutes ?? data.japanDeals).length === 0 ? (
           <EmptyState message="현재 검색된 항공권이 없습니다." />
         ) : (
-          (data.japanAllRoutes ?? data.japanDeals)
-            .sort((a, b) => a.price - b.price)
-            .map((deal, i) => <DealCard key={i} deal={deal} />)
+          <ExpandableDealList
+            deals={(data.japanAllRoutes ?? data.japanDeals).slice().sort((a, b) => a.price - b.price)}
+            threshold={150000}
+          />
         )}
       </section>
 
@@ -131,9 +70,10 @@ export default async function Dashboard() {
           {data.vacationSearch.flights.length === 0 ? (
             <EmptyState message="해당 기간 검색된 항공권이 없습니다." />
           ) : (
-            data.vacationSearch.flights.sort((a, b) => a.price - b.price).map((deal, i) => (
-              <DealCard key={i} deal={deal} />
-            ))
+            <ExpandableDealList
+              deals={data.vacationSearch.flights.slice().sort((a, b) => a.price - b.price)}
+              threshold={150000}
+            />
           )}
         </section>
       )}
@@ -150,9 +90,10 @@ export default async function Dashboard() {
           <EmptyState message="현재 검색된 항공권이 없습니다." />
         ) : (
           <>
-            {data.nzFlights.sort((a, b) => a.price - b.price).map((deal, i) => (
-              <DealCard key={i} deal={deal} />
-            ))}
+            <ExpandableDealList
+              deals={data.nzFlights.slice().sort((a, b) => a.price - b.price)}
+              threshold={900000}
+            />
             <p className="text-xs text-gray-600 mt-1 text-center">
               최저가 기준 3인 총액: {formatKRW(Math.min(...data.nzFlights.map(f => f.price)) * 3)}
             </p>

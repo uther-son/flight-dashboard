@@ -1,2 +1,5 @@
 .vercel
 .env.local.tmp
+node_modules
+.next
+*.tsbuildinfo

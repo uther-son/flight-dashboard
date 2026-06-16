@@ -1,37 +1,73 @@
-import type { RouteHistory } from '@/lib/types';
+'use client';
 
-function formatKRW(n: number) {
-  return `₩${n.toLocaleString('ko-KR')}`;
+import { useMemo, useState } from 'react';
+import type { FlightHistory } from '@/lib/types';
+import { formatKRW } from '@/lib/format';
+
+// routeId(예: "ICN_FUK", NZ는 "ICN_AKL_2027-01-05")에서 탭에 쓸 짧은 라벨 생성
+function shortLabel(routeId: string) {
+  const dateMatch = routeId.match(/_(\d{4})-(\d{2})-(\d{2})$/);
+  const base = dateMatch ? routeId.slice(0, dateMatch.index) : routeId;
+  const parts = base.split('_').filter(Boolean);
+  const codeLabel = parts.length >= 2 ? `${parts[0]}→${parts[1]}` : base;
+  return dateMatch ? `${codeLabel} ${Number(dateMatch[2])}/${Number(dateMatch[3])}` : codeLabel;
 }
 
-function Sparkline({ prices }: { prices: number[] }) {
-  if (prices.length < 2) return null;
-  const W = 100, H = 32, PAD = 3;
+function LineChart({ records }: { records: { date: string; price: number }[] }) {
+  const W = 320, H = 120, PAD = 20;
+  const prices = records.map(r => r.price);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const range = max - min || 1;
 
-  const pts = prices.map((p, i) => {
-    const x = PAD + (i / (prices.length - 1)) * (W - PAD * 2);
-    const y = H - PAD - ((p - min) / range) * (H - PAD * 2);
+  const pts = records.map((r, i) => {
+    const x = PAD + (i / Math.max(records.length - 1, 1)) * (W - PAD * 2);
+    const y = H - PAD - ((r.price - min) / range) * (H - PAD * 2);
     return [x, y] as [number, number];
   });
 
   const path = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-  const [lx, ly] = pts[pts.length - 1];
-  const isDown = prices[prices.length - 1] <= prices[prices.length - 2];
-  const color = isDown ? '#4ade80' : '#f87171';
+  const minIdx = prices.indexOf(min);
+  const [minX, minY] = pts[minIdx];
+  const labelAbove = minY > 16;
 
   return (
-    <svg width={W} height={H} className="overflow-visible">
-      <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={lx.toFixed(1)} cy={ly.toFixed(1)} r="2.5" fill={color} />
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-32">
+      <path d={path} fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {pts.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r={i === minIdx ? 3.5 : 2} fill={i === minIdx ? '#4ade80' : '#60a5fa'} />
+      ))}
+      <text
+        x={minX}
+        y={labelAbove ? minY - 8 : minY + 14}
+        textAnchor="middle"
+        fontSize="11"
+        fill="#4ade80"
+        fontWeight="bold"
+      >
+        {formatKRW(min)}
+      </text>
     </svg>
   );
 }
 
-function RouteCard({ route }: { route: RouteHistory }) {
-  const records = [...route.records].sort((a, b) => a.date.localeCompare(b.date));
+export function PriceTrend({ history }: { history: FlightHistory }) {
+  const routes = useMemo(
+    () => Object.values(history)
+      .filter(r => r.records.length > 0)
+      .sort((a, b) => a.routeName.localeCompare(b.routeName)),
+    [history]
+  );
+
+  const japanRoutes = routes.filter(r => !r.routeId.includes('_202'));
+  const nzRoutes = routes.filter(r => r.routeId.includes('_202'));
+
+  const [selectedId, setSelectedId] = useState(routes[0]?.routeId ?? '');
+
+  if (routes.length === 0) return null;
+
+  const selected = routes.find(r => r.routeId === selectedId) ?? routes[0];
+  const records = [...selected.records].sort((a, b) => a.date.localeCompare(b.date));
   const prices = records.map(r => r.price);
   const current = prices[prices.length - 1];
   const prev = prices.length >= 2 ? prices[prices.length - 2] : null;
@@ -40,71 +76,73 @@ function RouteCard({ route }: { route: RouteHistory }) {
   const isDown = change !== null && change < 0;
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{route.routeName}</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            역대 최저 {formatKRW(allTimeLow)} · {records.length}일치 데이터
-          </p>
-          <div className="mt-2">
-            {prices.length >= 2
-              ? <Sparkline prices={prices} />
-              : <p className="text-xs text-gray-600">내일부터 추이 표시</p>
-            }
+    <section className="mb-8">
+      <h2 className="text-base font-semibold mb-1">📊 가격 추이</h2>
+      <p className="text-xs text-gray-500 mb-3">노선을 선택하면 가격 변화를 확인할 수 있습니다</p>
+
+      <div className="space-y-2 mb-3">
+        {japanRoutes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {japanRoutes.map(r => (
+              <button
+                key={r.routeId}
+                onClick={() => setSelectedId(r.routeId)}
+                className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
+                  r.routeId === selected.routeId
+                    ? 'bg-blue-600 border-blue-600 text-white font-semibold'
+                    : 'border-gray-700 text-gray-400'
+                }`}
+              >
+                {shortLabel(r.routeId)}
+              </button>
+            ))}
+          </div>
+        )}
+        {nzRoutes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {nzRoutes.map(r => (
+              <button
+                key={r.routeId}
+                onClick={() => setSelectedId(r.routeId)}
+                className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
+                  r.routeId === selected.routeId
+                    ? 'bg-blue-600 border-blue-600 text-white font-semibold'
+                    : 'border-gray-700 text-gray-400'
+                }`}
+              >
+                {shortLabel(r.routeId)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <p className="text-sm font-semibold text-white mb-2">{selected.routeName}</p>
+        <div className="flex items-end justify-between mb-2">
+          <div>
+            <p className="text-2xl font-bold text-white tabular-nums">{formatKRW(current)}</p>
+            {change !== null ? (
+              <p className={`text-xs font-semibold mt-0.5 ${isDown ? 'text-green-400' : 'text-red-400'}`}>
+                {isDown ? '▼' : '▲'} {Math.abs(change).toFixed(1)}% (전일 대비)
+              </p>
+            ) : (
+              <p className="text-xs text-gray-600 mt-0.5">전일 비교 없음</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">역대 최저가</p>
+            <p className="text-sm font-bold text-green-400">{formatKRW(allTimeLow)}</p>
           </div>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-xl font-bold text-white tabular-nums">{formatKRW(current)}</p>
-          {change !== null ? (
-            <p className={`text-xs font-semibold mt-0.5 ${isDown ? 'text-green-400' : 'text-red-400'}`}>
-              {isDown ? '▼' : '▲'} {Math.abs(change).toFixed(1)}%
-            </p>
-          ) : (
-            <p className="text-xs text-gray-600 mt-0.5">전일 비교 없음</p>
-          )}
-        </div>
+
+        {prices.length >= 2 ? (
+          <LineChart records={records} />
+        ) : (
+          <p className="text-xs text-gray-600 py-8 text-center">내일부터 추이가 표시됩니다</p>
+        )}
+        <p className="text-xs text-gray-600 mt-1 text-right">{records.length}일치 데이터</p>
       </div>
-    </div>
+    </section>
   );
 }
-
-export function PriceTrend({ history }: { history: FlightHistory }) {
-  // 일본 노선만 (NZ 제외)
-  const japanRoutes = Object.values(history)
-    .filter(r => r.routeId && !r.routeId.includes('_202'))
-    .filter(r => r.records.length > 0)
-    .sort((a, b) => {
-      const ap = a.records[a.records.length - 1].price;
-      const bp = b.records[b.records.length - 1].price;
-      return ap - bp;
-    });
-
-  const nzRoutes = Object.values(history)
-    .filter(r => r.routeId && r.routeId.includes('_202'))
-    .filter(r => r.records.length > 0)
-    .sort((a, b) => a.routeId.localeCompare(b.routeId));
-
-  if (japanRoutes.length === 0 && nzRoutes.length === 0) return null;
-
-  return (
-    <>
-      {japanRoutes.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-base font-semibold mb-1">📊 일본 노선 가격 추이</h2>
-          <p className="text-xs text-gray-500 mb-3">역대 최저가 · 전일 대비 증감</p>
-          {japanRoutes.map(r => <RouteCard key={r.routeId} route={r} />)}
-        </section>
-      )}
-      {nzRoutes.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-base font-semibold mb-1">📊 뉴질랜드 가격 추이</h2>
-          <p className="text-xs text-gray-500 mb-3">출발일별 1인당 최저가 변화</p>
-          {nzRoutes.map(r => <RouteCard key={r.routeId} route={r} />)}
-        </section>
-      )}
-    </>
-  );
-}
-
-type FlightHistory = { [routeId: string]: RouteHistory };

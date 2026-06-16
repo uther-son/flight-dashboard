@@ -8,12 +8,46 @@ const AIRLINE_MAP: Record<string, string> = {
   NH: 'ANA항공', SQ: '싱가포르항공', CX: '캐세이퍼시픽', ET: '에티하드항공',
 };
 
+// 공항 코드 → 한글 지역명 (노선명 표기 통일용: "인천(ICN) → 후쿠오카(FUK)")
+const AIRPORT_MAP: Record<string, string> = {
+  ICN: '인천', GMP: '김포', HND: '하네다', NRT: '나리타', KIX: '간사이',
+  FUK: '후쿠오카', NGO: '나고야', CTS: '삿포로', KMJ: '구마모토', OKA: '오키나와',
+  AKL: '오클랜드',
+};
+
+function formatRouteName(origin: string, dest: string): string {
+  const originName = AIRPORT_MAP[origin] ?? origin;
+  const destName = AIRPORT_MAP[dest] ?? dest;
+  return `${originName}(${origin}) → ${destName}(${dest})`;
+}
+
+// "ICN→HND" / "ICN-HND" / "ICN_HND" 등 다양한 구분자에서 공항 코드 2개 추출
+function parseRouteCodes(raw: Record<string, unknown>): [string, string] | null {
+  const source = (raw.route as string) ?? (raw.routeId as string) ?? '';
+  const parts = source.split(/[→\-_]/).map(s => s.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    return [parts[0].toUpperCase(), parts[parts.length - 1].toUpperCase()];
+  }
+  return null;
+}
+
+// 히스토리에 저장된 routeId(날짜 접미사 포함 가능)로부터 표시용 이름 재생성 (깨진/구버전 이름 무시)
+function deriveHistoryRouteName(routeId: string): string {
+  const dateMatch = routeId.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
+  const routePart = dateMatch ? dateMatch[1] : routeId;
+  const parts = routePart.split(/[→\-_]/).map(s => s.trim()).filter(Boolean);
+  const name = parts.length >= 2
+    ? formatRouteName(parts[0].toUpperCase(), parts[parts.length - 1].toUpperCase())
+    : routePart;
+  return dateMatch ? `${name} (${dateMatch[2]} 출발)` : name;
+}
+
 // 루틴이 보내는 다양한 형식을 FlightDeal 표준으로 정규화
-function normalizeDeal(raw: Record<string, unknown>): FlightDeal {
-  // routeId: "route" 필드(예: "ICN→HND") 또는 routeId 필드
-  const routeRaw = (raw.route as string) ?? '';
-  const routeId = (raw.routeId as string) ?? routeRaw.replace('→', '_').replace(/\s/g, '');
-  const routeName = (raw.routeName as string) ?? routeRaw;
+function normalizeDeal(raw: Record<string, unknown>, defaultRoute?: [string, string]): FlightDeal {
+  const codes = parseRouteCodes(raw) ?? defaultRoute ?? null;
+  const [origin, dest] = codes ?? ['', ''];
+  const routeId = origin && dest ? `${origin}_${dest}` : ((raw.routeId as string) || (raw.route as string) || '');
+  const routeName = origin && dest ? formatRouteName(origin, dest) : ((raw.routeName as string) || routeId);
 
   // nights: 없으면 날짜 차이로 계산
   const depart = new Date(raw.departDate as string);
@@ -41,9 +75,9 @@ function normalizeDeal(raw: Record<string, unknown>): FlightDeal {
   };
 }
 
-function normalizeDeals(arr: unknown): FlightDeal[] {
+function normalizeDeals(arr: unknown, defaultRoute?: [string, string]): FlightDeal[] {
   if (!Array.isArray(arr)) return [];
-  return arr.map(item => normalizeDeal(item as Record<string, unknown>));
+  return arr.map(item => normalizeDeal(item as Record<string, unknown>, defaultRoute));
 }
 
 export function normalizeData(data: DashboardData): DashboardData {
@@ -51,7 +85,7 @@ export function normalizeData(data: DashboardData): DashboardData {
     ...data,
     japanDeals: normalizeDeals(data.japanDeals),
     japanAllRoutes: data.japanAllRoutes ? normalizeDeals(data.japanAllRoutes) : undefined,
-    nzFlights: normalizeDeals(data.nzFlights),
+    nzFlights: normalizeDeals(data.nzFlights, ['ICN', 'AKL']),
     vacationSearch: data.vacationSearch ? {
       ...data.vacationSearch,
       flights: normalizeDeals(data.vacationSearch.flights),
@@ -121,7 +155,7 @@ export async function getHistory(): Promise<FlightHistory> {
         r => typeof r?.price === 'number' && !Number.isNaN(r.price) && typeof r?.date === 'string'
       );
       if (records.length === 0) continue;
-      cleaned[key] = { ...route, records };
+      cleaned[key] = { ...route, routeName: deriveHistoryRouteName(route.routeId), records };
     }
     return cleaned;
   } catch {
