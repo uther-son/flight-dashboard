@@ -1,13 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FlightDeal } from '@/lib/types';
 import { DealCard } from './DealCard';
 
 const PAGE_SIZE = 5;
+export const COLLAPSE_ALL_EVENT = 'flight-dashboard:collapse-all';
 
 export function ExpandableDealList({ deals, threshold }: { deals: FlightDeal[]; threshold?: number }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    const handler = () => setVisibleCount(PAGE_SIZE);
+    window.addEventListener(COLLAPSE_ALL_EVENT, handler);
+    return () => window.removeEventListener(COLLAPSE_ALL_EVENT, handler);
+  }, []);
 
   if (deals.length === 0) return null;
 

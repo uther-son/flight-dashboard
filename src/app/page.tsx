@@ -3,6 +3,7 @@ import { formatKRW, formatUpdatedAt } from '@/lib/format';
 import { ExpandableDealList } from '@/components/ExpandableDealList';
 import { PriceTrend } from '@/components/PriceTrend';
 import { TravelCalendar } from '@/components/TravelCalendar';
+import { BackToTopButton } from '@/components/BackToTopButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,6 +122,8 @@ export default async function Dashboard() {
           </div>
         </div>
       )}
+
+      <BackToTopButton />
     </main>
   );
 }
