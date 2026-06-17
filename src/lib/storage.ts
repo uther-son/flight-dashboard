@@ -71,7 +71,7 @@ function normalizeDeal(raw: Record<string, unknown>, defaultRoute?: [string, str
     price: raw.price as number,
     airline,
     direct: typeof raw.direct === 'boolean' ? raw.direct : true,
-    url: (raw.url as string) ?? 'https://www.myrealtrip.com/flights',
+    url: (raw.url as string) ?? (raw.reservationUrl as string) ?? 'https://www.myrealtrip.com/flights',
   };
 }
 
