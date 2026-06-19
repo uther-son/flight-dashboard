@@ -7,9 +7,14 @@ import { formatKRW } from '@/lib/format';
 const NZ_DESTS = new Set(['AKL']);
 
 // routeId에서 출발지_도착지 형태의 기본 키 추출 (날짜 접미사, 구분자 차이 무시)
+// 처리 가능한 형식: GMP_KIX / GMP-KIX / GMP→KIX / GMP->KIX
 function extractBaseKey(routeId: string): string {
   const withoutDate = routeId.replace(/_\d{4}-\d{2}-\d{2}$/, '');
-  const parts = withoutDate.split(/[→\-_]/).map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s));
+  const normalized = withoutDate
+    .replace(/→/g, ' ')
+    .replace(/->/g, ' ')
+    .replace(/[-_]/g, ' ');
+  const parts = normalized.split(/\s+/).map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s));
   if (parts.length >= 2) return `${parts[0]}_${parts[parts.length - 1]}`;
   return withoutDate.toUpperCase();
 }

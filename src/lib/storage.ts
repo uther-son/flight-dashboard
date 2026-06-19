@@ -21,12 +21,13 @@ function formatRouteName(origin: string, dest: string): string {
   return `${originName}(${origin}) → ${destName}(${dest})`;
 }
 
-// "ICN→HND" / "ICN-HND" / "ICN_HND" 등 다양한 구분자에서 공항 코드 2개 추출
+// "ICN→HND" / "ICN-HND" / "ICN_HND" / "ICN->HND" 등 다양한 구분자에서 공항 코드 2개 추출
 function parseRouteCodes(raw: Record<string, unknown>): [string, string] | null {
   const source = (raw.route as string) ?? (raw.routeId as string) ?? '';
-  const parts = source.split(/[→\-_]/).map(s => s.trim()).filter(Boolean);
+  const normalized = source.replace(/→/g, ' ').replace(/->/g, ' ').replace(/[-_]/g, ' ');
+  const parts = normalized.split(/\s+/).map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s));
   if (parts.length >= 2) {
-    return [parts[0].toUpperCase(), parts[parts.length - 1].toUpperCase()];
+    return [parts[0], parts[parts.length - 1]];
   }
   return null;
 }
@@ -35,9 +36,10 @@ function parseRouteCodes(raw: Record<string, unknown>): [string, string] | null 
 function deriveHistoryRouteName(routeId: string): string {
   const dateMatch = routeId.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
   const routePart = dateMatch ? dateMatch[1] : routeId;
-  const parts = routePart.split(/[→\-_]/).map(s => s.trim()).filter(Boolean);
+  const normalized = routePart.replace(/→/g, ' ').replace(/->/g, ' ').replace(/[-_]/g, ' ');
+  const parts = normalized.split(/\s+/).map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s));
   const name = parts.length >= 2
-    ? formatRouteName(parts[0].toUpperCase(), parts[parts.length - 1].toUpperCase())
+    ? formatRouteName(parts[0], parts[parts.length - 1])
     : routePart;
   return dateMatch ? `${name} (${dateMatch[2]} 출발)` : name;
 }
