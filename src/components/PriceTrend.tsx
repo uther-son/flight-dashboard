@@ -30,6 +30,7 @@ function mergeRoutes(history: FlightHistory): RouteHistory[] {
   for (const route of Object.values(history)) {
     if (!route?.routeId || route.records.length === 0) continue;
     const key = extractBaseKey(route.routeId);
+    if (!/^[A-Z]{3}_[A-Z]{3}$/.test(key)) continue;
     if (!map.has(key)) {
       const cleanName = route.routeName.replace(/\s*\(.*출발\)\s*$/, '');
       map.set(key, { routeId: key, routeName: cleanName, records: [] });

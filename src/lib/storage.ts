@@ -150,14 +150,22 @@ export async function getHistory(): Promise<FlightHistory> {
     if (!raw) return {};
     const parsed = JSON.parse(raw) as FlightHistory;
     const cleaned: FlightHistory = {};
-    for (const [key, route] of Object.entries(parsed)) {
-      // 과거 버그로 생성된 쓰레기 항목 제외 (routeId 없음 또는 "undefined" 문자열 포함)
+    for (const [, route] of Object.entries(parsed)) {
       if (!route?.routeId || route.routeId.includes('undefined')) continue;
       const records = (route.records ?? []).filter(
         r => typeof r?.price === 'number' && !Number.isNaN(r.price) && typeof r?.date === 'string'
       );
       if (records.length === 0) continue;
-      cleaned[key] = { ...route, routeName: deriveHistoryRouteName(route.routeId), records };
+
+      // "_2027-01-05" 형식으로 잘못 저장된 NZ 항목 복구
+      const badNzMatch = route.routeId.match(/^_(\d{4}-\d{2}-\d{2})$/);
+      if (badNzMatch) {
+        const fixedId = `ICN_AKL_${badNzMatch[1]}`;
+        cleaned[fixedId] = { routeId: fixedId, routeName: deriveHistoryRouteName(fixedId), records };
+        continue;
+      }
+
+      cleaned[route.routeId] = { ...route, routeName: deriveHistoryRouteName(route.routeId), records };
     }
     return cleaned;
   } catch {
