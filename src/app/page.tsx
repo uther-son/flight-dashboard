@@ -46,7 +46,7 @@ export default async function Dashboard() {
       <section className="mb-8">
         <h2 className="text-base font-semibold mb-1">🇯🇵 일본 노선 최저가</h2>
         <p className="text-xs text-gray-500 mb-3">
-          {data ? `${data.searchDates.plus14} · ${data.searchDates.plus30} · ${data.searchDates.plus45} 출발 기준 · 직항 3박` : '매일 오전 11시 자동 검색'}
+          {data?.searchDates ? `${data.searchDates.plus14} · ${data.searchDates.plus30} · ${data.searchDates.plus45} 출발 기준 · 직항 3박` : '매일 오전 11시 자동 검색'}
           {' · '}₩150,000 이하 시 🔥 특가 표시 및 이메일 알림
         </p>
         {!data ? (
@@ -116,9 +116,9 @@ export default async function Dashboard() {
         <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 text-xs text-gray-500">
           <p className="font-medium text-gray-400 mb-2">검색 기준</p>
           <div className="space-y-1">
-            <p>+14일: {data.searchDates.plus14} 출발 (3박)</p>
-            <p>+30일: {data.searchDates.plus30} 출발 (3박)</p>
-            <p>+45일: {data.searchDates.plus45} 출발 (3박)</p>
+            <p>+14일: {data.searchDates?.plus14 ?? '-'} 출발 (3박)</p>
+            <p>+30일: {data.searchDates?.plus30 ?? '-'} 출발 (3박)</p>
+            <p>+45일: {data.searchDates?.plus45 ?? '-'} 출발 (3박)</p>
           </div>
         </div>
       )}
