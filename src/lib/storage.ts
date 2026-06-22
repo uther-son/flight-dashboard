@@ -83,11 +83,19 @@ function normalizeDeals(arr: unknown, defaultRoute?: [string, string]): FlightDe
 }
 
 export function normalizeData(data: DashboardData): DashboardData {
+  // 루틴이 보내는 필드명 변형 처리: japanRoutes→japanDeals, nzRoutes→nzFlights, runAt→updatedAt
+  const raw = data as unknown as Record<string, unknown>;
+  const japanSrc = (data.japanDeals?.length ? data.japanDeals : raw.japanRoutes) as unknown[] | undefined ?? [];
+  const japanAllSrc = (data.japanAllRoutes ?? raw.japanAllRoutes) as unknown[] | undefined;
+  const nzSrc = (data.nzFlights?.length ? data.nzFlights : raw.nzRoutes) as unknown[] | undefined ?? [];
+  const updatedAt = data.updatedAt || (raw.runAt as string) || new Date().toISOString();
+
   return {
     ...data,
-    japanDeals: normalizeDeals(data.japanDeals),
-    japanAllRoutes: data.japanAllRoutes ? normalizeDeals(data.japanAllRoutes) : undefined,
-    nzFlights: normalizeDeals(data.nzFlights, ['ICN', 'AKL']),
+    updatedAt,
+    japanDeals: normalizeDeals(japanSrc),
+    japanAllRoutes: japanAllSrc ? normalizeDeals(japanAllSrc) : undefined,
+    nzFlights: normalizeDeals(nzSrc, ['ICN', 'AKL']),
     vacationSearch: data.vacationSearch ? {
       ...data.vacationSearch,
       flights: normalizeDeals(data.vacationSearch.flights),
