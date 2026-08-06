@@ -1,17 +1,42 @@
 import { NextResponse } from 'next/server';
+import { saveResults, updateHistory } from '@/lib/storage';
+import { fetchJapanRoutes, fetchNzRoutes } from '@/lib/myrealtrip';
 
-const TRIGGER_ID = 'trig_01SGEsfHMZX9WBpDieqm94DQ';
+export const maxDuration = 60;
+
+function addDays(today: Date, days: number): string {
+  const d = new Date(today);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 export async function POST() {
-  const apiKey = process.env.CLAUDE_CODE_API_KEY;
-  if (apiKey) {
-    try {
-      await fetch(`https://api.claude.ai/v1/code/triggers/${TRIGGER_ID}/run`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      });
-    } catch { /* silent */ }
+  try {
+    const today = new Date();
+    const [japanRoutes, nzFlights] = await Promise.all([
+      fetchJapanRoutes(today),
+      fetchNzRoutes(),
+    ]);
+
+    const data = {
+      updatedAt: today.toISOString(),
+      searchDates: {
+        plus14: addDays(today, 14),
+        plus30: addDays(today, 30),
+        plus45: addDays(today, 45),
+      },
+      japanDeals: japanRoutes.filter(r => r.price <= 150000),
+      japanAllRoutes: japanRoutes,
+      nzFlights,
+      vacationSearch: null,
+      calendarEvents: [],
+    };
+
+    await saveResults(data);
+    await updateHistory(data);
+
+    return NextResponse.json({ ok: true, updatedAt: data.updatedAt });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
-  // 트리거 성공 여부와 관계없이 클라이언트는 폴링 시작
-  return NextResponse.json({ status: 'polling_started' });
 }

@@ -34,11 +34,11 @@ export function SearchButton({ initialUpdatedAt }: { initialUpdatedAt: string | 
       await fetch('/api/search', { method: 'POST' });
     } catch { /* trigger attempt failed, still poll */ }
     startPolling();
-    // 10분 후 타임아웃
+    // 2분 후 타임아웃
     setTimeout(() => {
       stopPolling();
       setStatus((s) => s === 'searching' ? 'error' : s);
-    }, 600_000);
+    }, 120_000);
   };
 
   useEffect(() => () => stopPolling(), []);
@@ -68,7 +68,7 @@ export function SearchButton({ initialUpdatedAt }: { initialUpdatedAt: string | 
             검색 중...
           </span>
         ) : (
-          '🔍 지금 검색하기'
+          '지금 조회하기'
         )}
       </button>
     </div>

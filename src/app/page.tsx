@@ -4,10 +4,9 @@ import { ExpandableDealList } from '@/components/ExpandableDealList';
 import { PriceTrend } from '@/components/PriceTrend';
 import { TravelCalendar } from '@/components/TravelCalendar';
 import { BackToTopButton } from '@/components/BackToTopButton';
+import { SearchButton } from '@/components/SearchButton';
 
 export const dynamic = 'force-dynamic';
-
-const ROUTINE_URL = 'https://claude.ai/code/routines/trig_01SGEsfHMZX9WBpDieqm94DQ';
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -32,14 +31,6 @@ export default async function Dashboard() {
             <p className="text-xs text-gray-500 mt-0.5">매일 자정 자동 검색</p>
           )}
         </div>
-        <a
-          href={ROUTINE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:border-gray-500 transition shrink-0"
-        >
-          수동 모니터링 돌리기
-        </a>
       </div>
 
       {/* 일본 노선 최저가 */}
@@ -120,6 +111,7 @@ export default async function Dashboard() {
       )}
 
       <BackToTopButton />
+      <SearchButton initialUpdatedAt={data?.updatedAt ?? null} />
     </main>
   );
 }
