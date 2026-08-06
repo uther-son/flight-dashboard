@@ -29,7 +29,7 @@ export default async function Dashboard() {
           {data ? (
             <p className="text-xs text-gray-500 mt-0.5">업데이트 {formatUpdatedAt(data.updatedAt)}</p>
           ) : (
-            <p className="text-xs text-gray-500 mt-0.5">매일 오전 11시 자동 검색</p>
+            <p className="text-xs text-gray-500 mt-0.5">매일 자정 자동 검색</p>
           )}
         </div>
         <a
@@ -46,11 +46,11 @@ export default async function Dashboard() {
       <section className="mb-8">
         <h2 className="text-base font-semibold mb-1">🇯🇵 일본 노선 최저가</h2>
         <p className="text-xs text-gray-500 mb-3">
-          {data?.searchDates ? `${data.searchDates.plus14} · ${data.searchDates.plus30} · ${data.searchDates.plus45} 출발 기준 · 직항 3박` : '매일 오전 11시 자동 검색'}
+          {data?.searchDates ? `+14일(${data.searchDates.plus14}) · +30일(${data.searchDates.plus30}) · +45일(${data.searchDates.plus45}) 출발 기준 · 직항 3박` : '매일 자정 자동 검색'}
           {' · '}₩150,000 이하 시 🔥 특가 표시 및 이메일 알림
         </p>
         {!data ? (
-          <EmptyState message="검색 결과가 없습니다. 매일 오전 11시에 자동으로 검색됩니다." />
+          <EmptyState message="검색 결과가 없습니다. 매일 자정에 자동으로 검색됩니다." />
         ) : (data.japanAllRoutes ?? data.japanDeals).length === 0 ? (
           <EmptyState message="현재 검색된 항공권이 없습니다." />
         ) : (
@@ -61,24 +61,6 @@ export default async function Dashboard() {
         )}
       </section>
 
-      {/* 내 휴가 기준 (캘린더에 휴가 일정이 있을 때만 표시) */}
-      {data?.vacationSearch && (
-        <section className="mb-8">
-          <h2 className="text-base font-semibold mb-1">📅 내 휴가 기준 검색</h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Google Calendar 휴가 일정 기준 · {data.vacationSearch.period} · 일본 10개 노선
-          </p>
-          {data.vacationSearch.flights.length === 0 ? (
-            <EmptyState message="해당 기간 검색된 항공권이 없습니다." />
-          ) : (
-            <ExpandableDealList
-              deals={data.vacationSearch.flights.slice().sort((a, b) => a.price - b.price)}
-              threshold={150000}
-            />
-          )}
-        </section>
-      )}
-
       {/* 뉴질랜드 노선 최저가 */}
       <section className="mb-8">
         <h2 className="text-base font-semibold mb-1">🇳🇿 뉴질랜드 노선 최저가</h2>
@@ -86,7 +68,7 @@ export default async function Dashboard() {
           ICN→AKL · 2027년 1~3월 출발 · 28박 · 1인당 왕복 · ₩900,000 이하 시 🔥 특가 표시 및 이메일 알림
         </p>
         {!data ? (
-          <EmptyState message="검색 결과가 없습니다. 매일 오전 11시에 자동으로 검색됩니다." />
+          <EmptyState message="검색 결과가 없습니다. 매일 자정에 자동으로 검색됩니다." />
         ) : data.nzFlights.length === 0 ? (
           <EmptyState message="현재 검색된 항공권이 없습니다." />
         ) : (
@@ -101,6 +83,20 @@ export default async function Dashboard() {
           </>
         )}
       </section>
+
+      {/* 내 휴가 기준 (휴가 기간 항공권 검색 결과 있을 때만 표시) */}
+      {data?.vacationSearch && data.vacationSearch.flights.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-base font-semibold mb-1">📅 내 휴가 기준 검색</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Google Calendar 휴가 일정 기준 · {data.vacationSearch.period} · 일본 10개 노선
+          </p>
+          <ExpandableDealList
+            deals={data.vacationSearch.flights.slice().sort((a, b) => a.price - b.price)}
+            threshold={150000}
+          />
+        </section>
+      )}
 
       {/* 추천 여행일자 */}
       <TravelCalendar

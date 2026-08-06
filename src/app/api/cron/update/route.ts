@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveResults, updateHistory } from '@/lib/storage';
-import { fetchJapanRoutes, fetchNzRoutes } from '@/lib/naver';
+import { fetchJapanRoutes, fetchNzRoutes } from '@/lib/myrealtrip';
 import type { DashboardData } from '@/lib/types';
 
 export const maxDuration = 60;
