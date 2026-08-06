@@ -103,7 +103,7 @@ export function TravelCalendar({
 
   const allWindows = [...personalWindows, ...upcomingPublic]
     .sort((a, b) => a.start.localeCompare(b.start))
-    .slice(0, 8);
+    .slice(0, 5);
 
   const syncedAt = updatedAt
     ? new Date(updatedAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
