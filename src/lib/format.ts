@@ -4,7 +4,7 @@ export function formatKRW(n: number) {
 
 export function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('ko-KR', {
-    month: 'short', day: 'numeric', weekday: 'short',
+    month: 'short', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul',
   });
 }
 
@@ -16,6 +16,6 @@ export function formatDuration(minutes: number) {
 
 export function formatUpdatedAt(iso: string) {
   return new Date(iso).toLocaleString('ko-KR', {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul',
   });
 }

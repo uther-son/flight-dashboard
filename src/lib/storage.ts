@@ -1,25 +1,11 @@
-import type { DashboardData, FlightDeal, FlightHistory } from './types';
+import type { DashboardData, FlightHistory } from './types';
 
-// 항공사 코드 → 한국어 이름 (루틴이 인코딩 깨진 이름 보낼 때 복구용)
-const AIRLINE_MAP: Record<string, string> = {
-  KE: '대한항공', OZ: '아시아나항공', LJ: '진에어', TW: '티웨이항공',
-  '7C': '제주항공', BX: '에어부산', ZE: '이스타항공', RF: '에어로케이',
-  RS: '에어서울', YP: '에어프레미아', MM: '피치항공', JL: '일본항공',
-  NH: 'ANA항공', SQ: '싱가포르항공', CX: '캐세이퍼시픽', ET: '에티하드항공',
-};
-
-// 공항 코드 → 한글 지역명 (노선명 표기 통일용: "인천(ICN) → 후쿠오카(FUK)")
+// 공항 코드 → 한글 지역명 (가격 추이 라벨용)
 const AIRPORT_MAP: Record<string, string> = {
   ICN: '인천', GMP: '김포', HND: '하네다', NRT: '나리타', KIX: '간사이',
   FUK: '후쿠오카', NGO: '나고야', CTS: '삿포로', KMJ: '구마모토', OKA: '오키나와',
   SYD: '시드니',
 };
-
-function formatRouteName(origin: string, dest: string): string {
-  const originName = AIRPORT_MAP[origin] ?? origin;
-  const destName = AIRPORT_MAP[dest] ?? dest;
-  return `${originName}(${origin}) → ${destName}(${dest})`;
-}
 
 // 가격 추이는 출발 공항(인천/김포)을 구분하지 않고 도착지 기준으로만 추적.
 // 시드니는 도시 대신 국가명(호주)으로 라벨링 — 일본처럼 여러 도시가 아니라 단일 목적지라서
@@ -28,73 +14,13 @@ function destOnlyName(dest: string): string {
   return `${AIRPORT_MAP[dest] ?? dest}(${dest})`;
 }
 
-// "ICN→HND" / "ICN-HND" / "ICN_HND" / "ICN->HND" 등 다양한 구분자에서 공항 코드 2개 추출
-function parseRouteCodes(raw: Record<string, unknown>): [string, string] | null {
-  const source = (raw.route as string) ?? (raw.routeId as string) ?? '';
-  const normalized = source.replace(/→/g, ' ').replace(/->/g, ' ').replace(/[-_]/g, ' ');
-  const parts = normalized.split(/\s+/).map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s));
-  if (parts.length >= 2) {
-    return [parts[0], parts[parts.length - 1]];
-  }
-  return null;
-}
-
-// 루틴이 보내는 다양한 형식을 FlightDeal 표준으로 정규화
-function normalizeDeal(raw: Record<string, unknown>, defaultRoute?: [string, string]): FlightDeal {
-  const codes = parseRouteCodes(raw) ?? defaultRoute ?? null;
-  const [origin, dest] = codes ?? ['', ''];
-  const routeId = origin && dest ? `${origin}_${dest}` : ((raw.routeId as string) || (raw.route as string) || '');
-  // Preserve city-level names (format: "도시 · 출발→도착") from myrealtrip.ts
-  const storedName = raw.routeName as string;
-  const routeName = (storedName?.includes('·'))
-    ? storedName
-    : (origin && dest ? formatRouteName(origin, dest) : (storedName || routeId));
-
-  // nights: 없으면 날짜 차이로 계산
-  const depart = new Date(raw.departDate as string);
-  const ret = new Date(raw.returnDate as string);
-  const nights = (typeof raw.nights === 'number')
-    ? raw.nights
-    : Math.round((ret.getTime() - depart.getTime()) / 86400000);
-
-  // airline: airlineCode로 한국어 이름 복원 (인코딩 깨진 경우 대비)
-  const airlineCode = (raw.airlineCode as string) ?? '';
-  const airline = (airlineCode && AIRLINE_MAP[airlineCode])
-    ? AIRLINE_MAP[airlineCode]
-    : (raw.airline as string ?? '');
-
-  return {
-    routeId,
-    routeName,
-    departDate: raw.departDate as string,
-    returnDate: raw.returnDate as string,
-    nights,
-    price: raw.price as number,
-    airline,
-    direct: typeof raw.direct === 'boolean' ? raw.direct : true,
-    durationMinutes: typeof raw.durationMinutes === 'number' ? raw.durationMinutes : 0,
-    url: ((raw.url as string) || (raw.reservationUrl as string) || 'https://www.myrealtrip.com/flights'),
-  };
-}
-
-function normalizeDeals(arr: unknown, defaultRoute?: [string, string]): FlightDeal[] {
-  if (!Array.isArray(arr)) return [];
-  return arr.map(item => normalizeDeal(item as Record<string, unknown>, defaultRoute));
-}
-
-export function normalizeData(data: DashboardData): DashboardData {
-  // 루틴이 보내는 필드명 변형 처리: japanRoutes→japanDeals, runAt→updatedAt
-  const raw = data as unknown as Record<string, unknown>;
-  const japanSrc = (data.japanDeals?.length ? data.japanDeals : raw.japanRoutes) as unknown[] | undefined ?? [];
-  const japanAllSrc = (data.japanAllRoutes ?? raw.japanAllRoutes) as unknown[] | undefined;
-  const updatedAt = data.updatedAt || (raw.runAt as string) || new Date().toISOString();
-
+// Redis에 저장된 값이 비어있거나 예전 스키마일 수 있으니 배열 필드만 방어적으로 채워준다.
+// (/api/search가 유일한 저장 경로라 그 외의 형태 보정은 더 필요 없음)
+function normalizeData(data: DashboardData): DashboardData {
   return {
     ...data,
-    updatedAt,
-    japanDeals: normalizeDeals(japanSrc),
-    japanAllRoutes: japanAllSrc ? normalizeDeals(japanAllSrc) : undefined,
-    sydneyFlights: normalizeDeals(data.sydneyFlights, ['ICN', 'SYD']),
+    japanDeals: data.japanDeals ?? [],
+    sydneyFlights: data.sydneyFlights ?? [],
   };
 }
 
