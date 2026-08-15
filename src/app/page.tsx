@@ -46,7 +46,17 @@ export default async function Dashboard() {
         <h2 className="text-base font-bold mb-0.5">🇯🇵 일본 최저가</h2>
         <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5 flex-wrap">
           <span>도시별 최저가 항공권</span>
-          <SearchCriteriaTooltip />
+          <SearchCriteriaTooltip
+            title="일본 노선 검색 기준"
+            lines={[
+              '도쿄 · 오사카 · 후쿠오카 · 나고야',
+              '삿포로 · 구마모토 · 오키나와',
+              '오늘부터 6개월(180일) 이내',
+              '도시별 최저가 출발일 자동 탐색',
+              '직항 · 3박',
+              '₩150,000 이하 🔥 특가',
+            ]}
+          />
         </p>
         {!data ? (
           <EmptyState message="검색 결과 없음 · 오전 10시 30분 자동 검색 또는 직접 조회" />
@@ -63,7 +73,18 @@ export default async function Dashboard() {
       {/* 1-2. 호주(시드니) 노선 */}
       <section className="mb-8">
         <h2 className="text-base font-bold mb-0.5">🇦🇺 호주(시드니) 최저가</h2>
-        <p className="text-xs text-slate-500 mb-3">20박 왕복 최저가 항공권</p>
+        <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5 flex-wrap">
+          <span>20박 왕복 최저가 항공권</span>
+          <SearchCriteriaTooltip
+            title="호주(시드니) 검색 기준"
+            lines={[
+              '오늘부터 6개월(180일) 이내',
+              '최저가 출발일 자동 탐색',
+              '20박 왕복 · 경유 포함',
+              '₩900,000 이하 🔥 특가',
+            ]}
+          />
+        </p>
         {!data ? (
           <EmptyState message="검색 결과 없음 · 오전 10시 30분 자동 검색 또는 직접 조회" />
         ) : data.sydneyFlights.length === 0 ? (
