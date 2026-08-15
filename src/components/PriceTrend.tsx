@@ -1,52 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { FlightHistory, RouteHistory, PriceRecord } from '@/lib/types';
 import { formatKRW } from '@/lib/format';
 
-const NZ_DESTS = new Set(['AKL']);
-
-function extractBaseKey(routeId: string): string {
-  const withoutDate = routeId.replace(/_\d{4}-\d{2}-\d{2}$/, '');
-  const normalized = withoutDate
-    .replace(/→/g, ' ')
-    .replace(/->/g, ' ')
-    .replace(/[-_]/g, ' ');
-  const parts = normalized.split(/\s+/).map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s));
-  if (parts.length >= 2) return `${parts[0]}_${parts[parts.length - 1]}`;
-  return withoutDate.toUpperCase();
+function isNz(routeId: string): boolean {
+  return routeId.includes('AKL');
 }
 
-// "도시 · 출발→도착" 형식이면 도시명, 아니면 "ICN→HND" 약식
+// "도시 · 출발→도착" 또는 "후쿠오카(FUK)" 형식에서 짧은 이름만 추출
 function buttonLabel(route: RouteHistory): string {
   const dotIdx = route.routeName.indexOf('·');
   if (dotIdx > 0) return route.routeName.slice(0, dotIdx).trim();
-  const parts = route.routeId.split('_');
-  return parts.length >= 2 ? `${parts[0]}→${parts[parts.length - 1]}` : route.routeId;
+  const parenIdx = route.routeName.indexOf('(');
+  return parenIdx > 0 ? route.routeName.slice(0, parenIdx).trim() : route.routeName;
 }
 
-function mergeRoutes(history: FlightHistory): RouteHistory[] {
-  const map = new Map<string, RouteHistory>();
-  for (const route of Object.values(history)) {
-    if (!route?.routeId || route.records.length === 0) continue;
-    const key = extractBaseKey(route.routeId);
-    if (!/^[A-Z]{3}_[A-Z]{3}$/.test(key)) continue;
-    if (!map.has(key)) {
-      const cleanName = route.routeName.replace(/\s*\(.*출발\)\s*$/, '');
-      map.set(key, { routeId: key, routeName: cleanName, records: [] });
-    }
-    const existing = map.get(key)!;
-    const byDate = new Map<string, PriceRecord>();
-    for (const r of [...existing.records, ...route.records]) {
-      if (!byDate.has(r.date) || r.price < byDate.get(r.date)!.price) {
-        byDate.set(r.date, r);
-      }
-    }
-    existing.records = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
-  }
-  return Array.from(map.values())
-    .filter(r => r.records.length > 0)
-    .sort((a, b) => a.routeName.localeCompare(b.routeName));
+function daysSince(dateStr: string): number {
+  const last = new Date(dateStr);
+  const today = new Date();
+  last.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.round((today.getTime() - last.getTime()) / 86400000);
+}
+
+function formatShortDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
 }
 
 function LineChart({ records }: { records: PriceRecord[] }) {
@@ -94,9 +73,11 @@ function LineChart({ records }: { records: PriceRecord[] }) {
 }
 
 export function PriceTrend({ history }: { history: FlightHistory }) {
-  const routes = useMemo(() => mergeRoutes(history), [history]);
-  const japanRoutes = routes.filter(r => !NZ_DESTS.has(r.routeId.split('_').pop() ?? ''));
-  const nzRoutes = routes.filter(r => NZ_DESTS.has(r.routeId.split('_').pop() ?? ''));
+  const routes = Object.values(history)
+    .filter(r => r.records.length > 0)
+    .sort((a, b) => a.routeName.localeCompare(b.routeName));
+  const japanRoutes = routes.filter(r => !isNz(r.routeId));
+  const nzRoutes = routes.filter(r => isNz(r.routeId));
 
   const [selectedId, setSelectedId] = useState(routes[0]?.routeId ?? '');
 
@@ -106,6 +87,8 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
   const records = [...selected.records].sort((a, b) => a.date.localeCompare(b.date));
   const prices = records.map(r => r.price);
   const current = prices[prices.length - 1];
+  const currentDate = records[records.length - 1].date;
+  const staleDays = daysSince(currentDate);
   const prev = prices.length >= 2 ? prices[prices.length - 2] : null;
   const allTimeLow = Math.min(...prices);
   const allTimeHigh = Math.max(...prices);
@@ -181,6 +164,10 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
                 </p>
               )}
             </div>
+            <p className={`text-[10px] mt-1 ${staleDays >= 3 ? 'text-amber-500' : 'text-slate-600'}`}>
+              {staleDays <= 0 ? '오늘' : staleDays === 1 ? '어제' : `${formatShortDate(currentDate)} (${staleDays}일 전)`} 검색 기준
+              {staleDays >= 3 && ' · 최근 이 노선이 안 잡혀 오래된 가격일 수 있어요'}
+            </p>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-slate-500">최저 / 최고</p>

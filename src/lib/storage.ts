@@ -21,6 +21,11 @@ function formatRouteName(origin: string, dest: string): string {
   return `${originName}(${origin}) → ${destName}(${dest})`;
 }
 
+// 가격 추이는 출발 공항(인천/김포)을 구분하지 않고 도착지 기준으로만 추적
+function destOnlyName(dest: string): string {
+  return `${AIRPORT_MAP[dest] ?? dest}(${dest})`;
+}
+
 // "ICN→HND" / "ICN-HND" / "ICN_HND" / "ICN->HND" 등 다양한 구분자에서 공항 코드 2개 추출
 function parseRouteCodes(raw: Record<string, unknown>): [string, string] | null {
   const source = (raw.route as string) ?? (raw.routeId as string) ?? '';
@@ -30,18 +35,6 @@ function parseRouteCodes(raw: Record<string, unknown>): [string, string] | null 
     return [parts[0], parts[parts.length - 1]];
   }
   return null;
-}
-
-// 히스토리에 저장된 routeId(날짜 접미사 포함 가능)로부터 표시용 이름 재생성 (깨진/구버전 이름 무시)
-function deriveHistoryRouteName(routeId: string): string {
-  const dateMatch = routeId.match(/^(.+)_(\d{4}-\d{2}-\d{2})$/);
-  const routePart = dateMatch ? dateMatch[1] : routeId;
-  const normalized = routePart.replace(/→/g, ' ').replace(/->/g, ' ').replace(/[-_]/g, ' ');
-  const parts = normalized.split(/\s+/).map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s));
-  const name = parts.length >= 2
-    ? formatRouteName(parts[0], parts[parts.length - 1])
-    : routePart;
-  return dateMatch ? `${name} (${dateMatch[2]} 출발)` : name;
 }
 
 // 루틴이 보내는 다양한 형식을 FlightDeal 표준으로 정규화
@@ -158,26 +151,13 @@ export async function getHistory(): Promise<FlightHistory> {
     if (!raw) return {};
     const parsed = JSON.parse(raw) as FlightHistory;
     const cleaned: FlightHistory = {};
-    for (const [, route] of Object.entries(parsed)) {
-      if (!route?.routeId || route.routeId.includes('undefined')) continue;
+    for (const [key, route] of Object.entries(parsed)) {
+      if (!route?.routeId) continue;
       const records = (route.records ?? []).filter(
         r => typeof r?.price === 'number' && !Number.isNaN(r.price) && typeof r?.date === 'string'
       );
       if (records.length === 0) continue;
-
-      // "_2027-01-05" 형식으로 잘못 저장된 NZ 항목 복구
-      const badNzMatch = route.routeId.match(/^_(\d{4}-\d{2}-\d{2})$/);
-      if (badNzMatch) {
-        const fixedId = `ICN_AKL_${badNzMatch[1]}`;
-        cleaned[fixedId] = { routeId: fixedId, routeName: deriveHistoryRouteName(fixedId), records };
-        continue;
-      }
-
-      // Preserve city-level names stored by new fetch logic; derive only for old/plain records
-      const displayName = route.routeName?.includes('·')
-        ? route.routeName
-        : deriveHistoryRouteName(route.routeId);
-      cleaned[route.routeId] = { ...route, routeName: displayName, records };
+      cleaned[key] = { ...route, records };
     }
     return cleaned;
   } catch {
@@ -190,17 +170,18 @@ export async function updateHistory(data: DashboardData): Promise<void> {
     const history = await getHistory();
     const date = data.updatedAt.split('T')[0];
 
-    // japanAllRoutes 우선, 없으면 japanDeals로 폴백
+    // japanAllRoutes 우선, 없으면 japanDeals로 폴백. 출발 공항(인천/김포) 구분 없이 도착지 기준으로 추적
     const routes = data.japanAllRoutes ?? data.japanDeals;
     for (const deal of routes) {
-      if (!history[deal.routeId]) {
-        history[deal.routeId] = { routeId: deal.routeId, routeName: deal.routeName, records: [] };
+      const dest = deal.routeId.split(/[_-]/).pop() || deal.routeId;
+      if (!history[dest]) {
+        history[dest] = { routeId: dest, routeName: destOnlyName(dest), records: [] };
       }
-      history[deal.routeId].records = history[deal.routeId].records.filter(r => r.date !== date);
-      history[deal.routeId].records.push({ date, price: deal.price, departDate: deal.departDate });
-      history[deal.routeId].records.sort((a, b) => a.date.localeCompare(b.date));
-      if (history[deal.routeId].records.length > MAX_RECORDS) {
-        history[deal.routeId].records = history[deal.routeId].records.slice(-MAX_RECORDS);
+      history[dest].records = history[dest].records.filter(r => r.date !== date);
+      history[dest].records.push({ date, price: deal.price, departDate: deal.departDate });
+      history[dest].records.sort((a, b) => a.date.localeCompare(b.date));
+      if (history[dest].records.length > MAX_RECORDS) {
+        history[dest].records = history[dest].records.slice(-MAX_RECORDS);
       }
     }
 
