@@ -15,6 +15,7 @@ export interface CalendarEvent {
   title: string;
   startDate: string; // YYYY-MM-DD
   endDate: string;   // YYYY-MM-DD (inclusive)
+  type?: 'personal' | 'public'; // 없으면(과거 데이터) personal로 취급
 }
 
 export interface DashboardData {

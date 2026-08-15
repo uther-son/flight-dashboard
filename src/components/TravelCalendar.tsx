@@ -1,16 +1,6 @@
 import type { CalendarEvent, FlightDeal } from '@/lib/types';
 import { formatKRW } from '@/lib/format';
 
-const PUBLIC_HOLIDAYS = [
-  { label: '광복절', start: '2026-08-13', end: '2026-08-17', nights: 4 },
-  { label: '추석 연휴', start: '2026-09-24', end: '2026-09-29', nights: 5 },
-  { label: '개천절+한글날', start: '2026-10-01', end: '2026-10-12', nights: 11 },
-  { label: '크리스마스', start: '2026-12-24', end: '2026-12-27', nights: 3 },
-  { label: '신정', start: '2026-12-31', end: '2027-01-03', nights: 3 },
-  { label: '설날 연휴', start: '2027-01-25', end: '2027-01-31', nights: 6 },
-  { label: '삼일절', start: '2027-02-27', end: '2027-03-02', nights: 3 },
-];
-
 const WEEKENDS_AHEAD = 12; // 향후 몇 주치 주말을 후보로 볼지
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -169,18 +159,24 @@ export function TravelCalendar({
   updatedAt?: string;
   japanDeals?: FlightDeal[];
 }) {
-  const personalWindows = (calendarEvents ?? [])
-    .filter(e => isUpcoming(e.startDate))
-    .map(e => {
-      const startDay = kstWeekday(e.startDate);
-      const windowStart = startDay === 1 ? addDays(e.startDate, -2) : startDay === 2 ? addDays(e.startDate, -3) : e.startDate;
-      const endDay = kstWeekday(e.endDate);
-      const windowEnd = endDay === 4 ? addDays(e.endDate, 2) : endDay === 5 ? addDays(e.endDate, 1) : e.endDate;
-      const nights = Math.round((parseDate(windowEnd).getTime() - parseDate(windowStart).getTime()) / 86400000);
-      return { label: e.title, type: 'personal' as const, start: windowStart, end: windowEnd, nights };
-    });
+  // 이벤트 앞뒤로 주말이 붙어있으면 여행 가능 구간에 포함 (월요일 휴가면 앞의 토·일까지, 목·금이면 뒤의 주말까지)
+  const toWindow = (e: CalendarEvent) => {
+    const startDay = kstWeekday(e.startDate);
+    const windowStart = startDay === 1 ? addDays(e.startDate, -2) : startDay === 2 ? addDays(e.startDate, -3) : e.startDate;
+    const endDay = kstWeekday(e.endDate);
+    const windowEnd = endDay === 4 ? addDays(e.endDate, 2) : endDay === 5 ? addDays(e.endDate, 1) : e.endDate;
+    const nights = Math.round((parseDate(windowEnd).getTime() - parseDate(windowStart).getTime()) / 86400000);
+    return { label: e.title, start: windowStart, end: windowEnd, nights };
+  };
 
-  const upcomingPublic = PUBLIC_HOLIDAYS.filter(h => isUpcoming(h.start)).map(h => ({ ...h, type: 'public' as const }));
+  const events = calendarEvents ?? [];
+  const personalWindows = events
+    .filter(e => e.type !== 'public' && isUpcoming(e.startDate))
+    .map(e => ({ ...toWindow(e), type: 'personal' as const }));
+
+  const upcomingPublic = events
+    .filter(e => e.type === 'public' && isUpcoming(e.startDate))
+    .map(e => ({ ...toWindow(e), type: 'public' as const }));
 
   // 주말은 매칭되는 항공권이 있을 때만 후보로 노출 (없으면 52주 내내 빈 카드만 나열되어 버림)
   const weekendWindows = upcomingWeekends(WEEKENDS_AHEAD)
