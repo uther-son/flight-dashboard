@@ -11,23 +11,51 @@ const PUBLIC_HOLIDAYS = [
   { label: '삼일절', start: '2027-02-27', end: '2027-03-02', nights: 3 },
 ];
 
+const WEEKENDS_AHEAD = 12; // 향후 몇 주치 주말을 후보로 볼지
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+// "YYYY-MM-DD"는 어떤 실제 순간이 아니라 순수 달력 날짜로 다룬다 —
+// 항상 자정 UTC로 파싱/포맷하고, 요일·일수 계산도 UTC 기준으로 일관되게 처리한다.
+// (한국 시간 오프셋을 파싱에 직접 섞으면 자정 부근에서 하루가 밀리는 버그가 생김)
+function parseDate(dateStr: string): Date {
+  return new Date(`${dateStr}T00:00:00Z`);
+}
+
+function toDateStr(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+// 서버는 UTC로 돌아가므로, "오늘"을 한국 시간 기준 날짜로 맞춰서 반환
+function todayKst(): Date {
+  const kst = new Date(Date.now() + KST_OFFSET_MS);
+  return new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()));
+}
+
+// "YYYY-MM-DD"의 요일 (0=일 ~ 6=토)
+function kstWeekday(dateStr: string): number {
+  return parseDate(dateStr).getUTCDay();
+}
+
+function addDays(dateStr: string, days: number): string {
+  const d = parseDate(dateStr);
+  d.setUTCDate(d.getUTCDate() + days);
+  return toDateStr(d);
+}
+
 function formatDateRange(start: string, end: string) {
-  const s = new Date(start);
-  const e = new Date(end);
-  const fmt = (d: Date) => d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' });
-  return `${fmt(s)} ~ ${fmt(e)}`;
+  const fmt = (s: string) =>
+    parseDate(s).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul' });
+  return `${fmt(start)} ~ ${fmt(end)}`;
 }
 
 function isUpcoming(start: string) {
-  return new Date(start) > new Date();
+  return start > toDateStr(todayKst());
 }
 
 function daysUntil(start: string) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(start);
-  target.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - today.getTime()) / 86400000);
+  const diff = parseDate(start).getTime() - todayKst().getTime();
+  return Math.round(diff / 86400000);
 }
 
 // 해당 여행 윈도우 안에 예약 가능한 항공권 찾기 (출발일이 윈도우 내에 있는 것)
@@ -37,16 +65,30 @@ function dealsInWindow(
   nights: number,
   deals: FlightDeal[],
 ): FlightDeal[] {
-  const windowStart = new Date(start);
-  const windowEnd = new Date(end);
-  // 출발일 + nights일이 윈도우 종료일 이전이어야 함
-  const maxDeparture = new Date(windowEnd);
-  maxDeparture.setDate(maxDeparture.getDate() - nights + 1);
+  const maxDeparture = addDays(end, -(nights - 1));
 
-  return deals.filter(d => {
-    const dep = new Date(d.departDate);
-    return dep >= windowStart && dep <= maxDeparture;
-  }).sort((a, b) => a.price - b.price);
+  return deals.filter(d => d.departDate >= start && d.departDate <= maxDeparture)
+    .sort((a, b) => a.price - b.price);
+}
+
+// 매주 토요일을 기준으로 금~월(3박) 윈도우 후보 생성
+function upcomingWeekends(count: number): { label: string; type: 'weekend'; start: string; end: string; nights: number }[] {
+  const out = [];
+  let sat = toDateStr(todayKst());
+  const startWeekday = kstWeekday(sat);
+  sat = addDays(sat, (6 - startWeekday + 7) % 7 || 7); // 다음 토요일부터
+
+  for (let i = 0; i < count; i++) {
+    out.push({
+      label: '주말',
+      type: 'weekend' as const,
+      start: addDays(sat, -1), // 금
+      end: addDays(sat, 2),    // 월
+      nights: 3,
+    });
+    sat = addDays(sat, 7);
+  }
+  return out;
 }
 
 function cityFromName(routeName: string): string {
@@ -54,6 +96,12 @@ function cityFromName(routeName: string): string {
   if (dotIdx > 0) return routeName.slice(0, dotIdx).trim();
   return routeName;
 }
+
+const TYPE_BADGE: Record<string, string> = {
+  personal: '내 휴가',
+  weekend: '주말',
+  public: '공휴일',
+};
 
 function WindowCard({ label, type, start, end, nights, matchedDeals }: {
   label: string; type: string; start: string; end: string; nights: number;
@@ -76,7 +124,7 @@ function WindowCard({ label, type, start, end, nights, matchedDeals }: {
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
               isPersonal ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-700 text-slate-300'
             }`}>
-              {isPersonal ? '내 휴가' : '공휴일'}
+              {TYPE_BADGE[type] ?? '공휴일'}
             </span>
             <span className="text-sm font-semibold text-white truncate">{label}</span>
           </div>
@@ -124,39 +172,33 @@ export function TravelCalendar({
   const personalWindows = (calendarEvents ?? [])
     .filter(e => isUpcoming(e.startDate))
     .map(e => {
-      const start = new Date(e.startDate);
-      const end = new Date(e.endDate);
-      const windowStart = new Date(start);
-      const day = windowStart.getDay();
-      if (day === 1) windowStart.setDate(windowStart.getDate() - 2);
-      else if (day === 2) windowStart.setDate(windowStart.getDate() - 3);
-      const windowEnd = new Date(end);
-      const endDay = windowEnd.getDay();
-      if (endDay === 4) windowEnd.setDate(windowEnd.getDate() + 2);
-      else if (endDay === 5) windowEnd.setDate(windowEnd.getDate() + 1);
-      const nights = Math.round((windowEnd.getTime() - windowStart.getTime()) / 86400000);
-      return {
-        label: e.title, type: 'personal' as const,
-        start: windowStart.toISOString().split('T')[0],
-        end: windowEnd.toISOString().split('T')[0],
-        nights,
-      };
+      const startDay = kstWeekday(e.startDate);
+      const windowStart = startDay === 1 ? addDays(e.startDate, -2) : startDay === 2 ? addDays(e.startDate, -3) : e.startDate;
+      const endDay = kstWeekday(e.endDate);
+      const windowEnd = endDay === 4 ? addDays(e.endDate, 2) : endDay === 5 ? addDays(e.endDate, 1) : e.endDate;
+      const nights = Math.round((parseDate(windowEnd).getTime() - parseDate(windowStart).getTime()) / 86400000);
+      return { label: e.title, type: 'personal' as const, start: windowStart, end: windowEnd, nights };
     });
 
   const upcomingPublic = PUBLIC_HOLIDAYS.filter(h => isUpcoming(h.start)).map(h => ({ ...h, type: 'public' as const }));
-  const allWindows = [...personalWindows, ...upcomingPublic]
+
+  // 주말은 매칭되는 항공권이 있을 때만 후보로 노출 (없으면 52주 내내 빈 카드만 나열되어 버림)
+  const weekendWindows = upcomingWeekends(WEEKENDS_AHEAD)
+    .filter(w => dealsInWindow(w.start, w.end, w.nights, japanDeals).length > 0);
+
+  const allWindows = [...personalWindows, ...upcomingPublic, ...weekendWindows]
     .sort((a, b) => a.start.localeCompare(b.start))
     .slice(0, 6);
 
   const syncedAt = updatedAt
-    ? new Date(updatedAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    ? new Date(updatedAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' })
     : null;
 
   return (
     <section className="mb-8">
       <h2 className="text-base font-bold mb-0.5">📆 추천 여행 일자</h2>
       <p className="text-xs text-slate-500 mb-3">
-        공휴일·휴가에 맞는 항공권 매칭
+        구글 캘린더의 주말 / 공휴일 / 휴일 기준 여행 가능 일자
         {syncedAt && <span className="ml-1 text-slate-600">· 동기화 {syncedAt}</span>}
       </p>
 
