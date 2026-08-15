@@ -11,16 +11,18 @@ export const maxDuration = 60;
 // calendarEvents는 루틴만 알고 있으므로, 수동 버튼처럼 전달이 없을 땐 기존 저장값을 그대로 유지한다.
 async function runSearch(calendarEvents: CalendarEvent[] | undefined) {
   const today = new Date();
-  let [japanRoutes, sydneyFlights, previous] = await Promise.all([
-    fetchJapanRoutes(today),
-    fetchSydneyRoutes(),
-    calendarEvents ? Promise.resolve(null) : getLatestResults(),
-  ]);
+  const previous = calendarEvents ? null : await getLatestResults();
+
+  // 시드니(단일 요청 몇 개)를 일본(동시 8개 병렬 요청)보다 먼저 실행 —
+  // 같이 돌리면 일본의 초기 병렬 요청 폭주에 시드니 요청이 묻혀 타임아웃 나는 경우가 있었음
+  let sydneyFlights = await fetchSydneyRoutes();
+  let japanRoutes = await fetchJapanRoutes(today);
 
   // 완전 실패는 대개 MCP 순간 요청제한(rate limit) — 한 번 짧게 쉬고 재시도
   if (japanRoutes.length === 0 && sydneyFlights.length === 0) {
     await new Promise(r => setTimeout(r, 3000));
-    [japanRoutes, sydneyFlights] = await Promise.all([fetchJapanRoutes(today), fetchSydneyRoutes()]);
+    sydneyFlights = await fetchSydneyRoutes();
+    japanRoutes = await fetchJapanRoutes(today);
   }
 
   if (japanRoutes.length === 0 && sydneyFlights.length === 0) {
