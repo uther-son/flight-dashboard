@@ -45,7 +45,7 @@ export default async function Dashboard() {
       <section className="mb-6">
         <h2 className="text-base font-bold mb-0.5">🇯🇵 일본 최저가</h2>
         <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5 flex-wrap">
-          <span>오늘부터 6개월 이내 도시별 최저가 · 직항 3박 · ₩150,000 이하 🔥 특가</span>
+          <span>도시별 최저가 항공권</span>
           <SearchCriteriaTooltip />
         </p>
         {!data ? (
@@ -60,12 +60,10 @@ export default async function Dashboard() {
         )}
       </section>
 
-      {/* 1-2. 시드니 노선 */}
+      {/* 1-2. 호주(시드니) 노선 */}
       <section className="mb-8">
-        <h2 className="text-base font-bold mb-0.5">🇦🇺 시드니</h2>
-        <p className="text-xs text-slate-500 mb-3">
-          ICN → SYD · 오늘부터 6개월 이내 최저가 · 20박 1인 왕복 · ₩900,000 이하 🔥 특가
-        </p>
+        <h2 className="text-base font-bold mb-0.5">🇦🇺 호주(시드니) 최저가</h2>
+        <p className="text-xs text-slate-500 mb-3">20박 왕복 최저가 항공권</p>
         {!data ? (
           <EmptyState message="검색 결과 없음 · 오전 10시 30분 자동 검색 또는 직접 조회" />
         ) : data.sydneyFlights.length === 0 ? (

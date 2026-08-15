@@ -156,7 +156,7 @@ export function TravelCalendar({
     <section className="mb-8">
       <h2 className="text-base font-bold mb-0.5">📆 추천 여행 일자</h2>
       <p className="text-xs text-slate-500 mb-3">
-        공휴일·내 휴가 기준 여행 가능 윈도우 · 항공권 있으면 ✓ 표시
+        공휴일·휴가에 맞는 항공권 매칭
         {syncedAt && <span className="ml-1 text-slate-600">· 동기화 {syncedAt}</span>}
       </p>
 

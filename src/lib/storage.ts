@@ -21,8 +21,10 @@ function formatRouteName(origin: string, dest: string): string {
   return `${originName}(${origin}) → ${destName}(${dest})`;
 }
 
-// 가격 추이는 출발 공항(인천/김포)을 구분하지 않고 도착지 기준으로만 추적
+// 가격 추이는 출발 공항(인천/김포)을 구분하지 않고 도착지 기준으로만 추적.
+// 시드니는 도시 대신 국가명(호주)으로 라벨링 — 일본처럼 여러 도시가 아니라 단일 목적지라서
 function destOnlyName(dest: string): string {
+  if (dest === 'SYD') return '호주(SYD)';
   return `${AIRPORT_MAP[dest] ?? dest}(${dest})`;
 }
 
@@ -170,8 +172,9 @@ export async function updateHistory(data: DashboardData): Promise<void> {
     const history = await getHistory();
     const date = data.updatedAt.split('T')[0];
 
-    // japanAllRoutes 우선, 없으면 japanDeals로 폴백. 출발 공항(인천/김포) 구분 없이 도착지 기준으로 추적
-    const routes = data.japanAllRoutes ?? data.japanDeals;
+    // japanAllRoutes 우선, 없으면 japanDeals로 폴백. 출발 공항(인천/김포) 구분 없이 도착지 기준으로 추적.
+    // 시드니도 목적지가 하나뿐이라 같은 방식으로 도착지(SYD) 기준 하나의 추이로 묶는다.
+    const routes = [...(data.japanAllRoutes ?? data.japanDeals), ...data.sydneyFlights];
     for (const deal of routes) {
       const dest = deal.routeId.split(/[_-]/).pop() || deal.routeId;
       if (!history[dest]) {
@@ -182,20 +185,6 @@ export async function updateHistory(data: DashboardData): Promise<void> {
       history[dest].records.sort((a, b) => a.date.localeCompare(b.date));
       if (history[dest].records.length > MAX_RECORDS) {
         history[dest].records = history[dest].records.slice(-MAX_RECORDS);
-      }
-    }
-
-    // 시드니 추이 추적 (출발 윈도우별로 구분)
-    for (const deal of data.sydneyFlights) {
-      const key = `${deal.routeId}_${deal.departDate}`;
-      if (!history[key]) {
-        history[key] = { routeId: key, routeName: `${deal.routeName} (${deal.departDate} 출발)`, records: [] };
-      }
-      history[key].records = history[key].records.filter(r => r.date !== date);
-      history[key].records.push({ date, price: deal.price, departDate: deal.departDate });
-      history[key].records.sort((a, b) => a.date.localeCompare(b.date));
-      if (history[key].records.length > MAX_RECORDS) {
-        history[key].records = history[key].records.slice(-MAX_RECORDS);
       }
     }
 
