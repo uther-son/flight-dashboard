@@ -6,8 +6,6 @@ import { formatKRW } from '@/lib/format';
 
 const NZ_DESTS = new Set(['AKL']);
 
-// routeId에서 출발지_도착지 형태의 기본 키 추출 (날짜 접미사, 구분자 차이 무시)
-// 처리 가능한 형식: GMP_KIX / GMP-KIX / GMP→KIX / GMP->KIX
 function extractBaseKey(routeId: string): string {
   const withoutDate = routeId.replace(/_\d{4}-\d{2}-\d{2}$/, '');
   const normalized = withoutDate
@@ -19,12 +17,14 @@ function extractBaseKey(routeId: string): string {
   return withoutDate.toUpperCase();
 }
 
-function shortLabel(routeId: string): string {
-  const parts = routeId.split('_');
-  return parts.length >= 2 ? `${parts[0]}→${parts[parts.length - 1]}` : routeId;
+// "도시 · 출발→도착" 형식이면 도시명, 아니면 "ICN→HND" 약식
+function buttonLabel(route: RouteHistory): string {
+  const dotIdx = route.routeName.indexOf('·');
+  if (dotIdx > 0) return route.routeName.slice(0, dotIdx).trim();
+  const parts = route.routeId.split('_');
+  return parts.length >= 2 ? `${parts[0]}→${parts[parts.length - 1]}` : route.routeId;
 }
 
-// 같은 출발지→도착지 노선을 하나로 병합 (출발일별로 쪼개진 기록 합산)
 function mergeRoutes(history: FlightHistory): RouteHistory[] {
   const map = new Map<string, RouteHistory>();
   for (const route of Object.values(history)) {
@@ -64,15 +64,28 @@ function LineChart({ records }: { records: PriceRecord[] }) {
 
   const path = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const minIdx = prices.indexOf(min);
+  const maxIdx = prices.indexOf(max);
+  const lastIdx = records.length - 1;
   const [minX, minY] = pts[minIdx];
   const labelAbove = minY > 16;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-32">
-      <path d={path} fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      {pts.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r={i === minIdx ? 3.5 : 2} fill={i === minIdx ? '#4ade80' : '#60a5fa'} />
-      ))}
+      <path d={path} fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {pts.map(([x, y], i) => {
+        const isMin = i === minIdx;
+        const isMax = i === maxIdx;
+        const isLast = i === lastIdx;
+        return (
+          <circle
+            key={i}
+            cx={x} cy={y}
+            r={isMin || isMax || isLast ? 3.5 : 1.5}
+            fill={isMin ? '#4ade80' : isMax ? '#f87171' : isLast ? '#38bdf8' : '#38bdf8'}
+            fillOpacity={isMin || isMax || isLast ? 1 : 0.5}
+          />
+        );
+      })}
       <text x={minX} y={labelAbove ? minY - 8 : minY + 14} textAnchor="middle" fontSize="11" fill="#4ade80" fontWeight="bold">
         {formatKRW(min)}
       </text>
@@ -95,30 +108,39 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
   const current = prices[prices.length - 1];
   const prev = prices.length >= 2 ? prices[prices.length - 2] : null;
   const allTimeLow = Math.min(...prices);
+  const allTimeHigh = Math.max(...prices);
   const change = prev != null ? ((current - prev) / prev * 100) : null;
   const isDown = change !== null && change < 0;
+
+  // 현재가가 전체 범위에서 얼마나 저렴한지 (0% = 최저, 100% = 최고)
+  const pricePercentile = allTimeHigh > allTimeLow
+    ? Math.round((current - allTimeLow) / (allTimeHigh - allTimeLow) * 100)
+    : 0;
+  const isPriceLow = pricePercentile <= 30;
+  const isPriceHigh = pricePercentile >= 70;
+
+  const buttonStyle = (routeId: string) =>
+    routeId === selected.routeId
+      ? 'bg-sky-500/20 border-sky-500/50 text-sky-300 font-semibold'
+      : 'border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-400';
 
   return (
     <section className="mb-8">
       <h2 className="text-base font-semibold mb-1">📊 가격 추이</h2>
-      <p className="text-xs text-gray-500 mb-3">노선을 선택하면 가격 변화를 확인할 수 있습니다</p>
+      <p className="text-xs text-slate-500 mb-3">매일 검색된 최저가 기록 · 쌀 때를 파악하는 그래프</p>
 
       <div className="space-y-3 mb-3">
         {japanRoutes.length > 0 && (
           <div>
-            <p className="text-xs text-gray-500 mb-1.5">🇯🇵 일본</p>
+            <p className="text-xs text-slate-600 mb-1.5">🇯🇵 일본</p>
             <div className="flex flex-wrap gap-1.5">
               {japanRoutes.map(r => (
                 <button
                   key={r.routeId}
                   onClick={() => setSelectedId(r.routeId)}
-                  className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
-                    r.routeId === selected.routeId
-                      ? 'bg-blue-600 border-blue-600 text-white font-semibold'
-                      : 'border-gray-700 text-gray-400'
-                  }`}
+                  className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${buttonStyle(r.routeId)}`}
                 >
-                  {shortLabel(r.routeId)}
+                  {buttonLabel(r)}
                 </button>
               ))}
             </div>
@@ -126,19 +148,15 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
         )}
         {nzRoutes.length > 0 && (
           <div>
-            <p className="text-xs text-gray-500 mb-1.5">🇳🇿 뉴질랜드</p>
+            <p className="text-xs text-slate-600 mb-1.5">🇳🇿 뉴질랜드</p>
             <div className="flex flex-wrap gap-1.5">
               {nzRoutes.map(r => (
                 <button
                   key={r.routeId}
                   onClick={() => setSelectedId(r.routeId)}
-                  className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${
-                    r.routeId === selected.routeId
-                      ? 'bg-blue-600 border-blue-600 text-white font-semibold'
-                      : 'border-gray-700 text-gray-400'
-                  }`}
+                  className={`shrink-0 text-xs px-2.5 py-1 rounded-full border transition ${buttonStyle(r.routeId)}`}
                 >
-                  {shortLabel(r.routeId)}
+                  {buttonLabel(r)}
                 </button>
               ))}
             </div>
@@ -146,31 +164,40 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
         )}
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div className="bg-slate-900 border border-slate-700/50 rounded-2xl p-4">
         <p className="text-sm font-semibold text-white mb-2">{selected.routeName}</p>
         <div className="flex items-end justify-between mb-2">
           <div>
             <p className="text-2xl font-bold text-white tabular-nums">{formatKRW(current)}</p>
-            {change !== null ? (
-              <p className={`text-xs font-semibold mt-0.5 ${isDown ? 'text-green-400' : 'text-red-400'}`}>
-                {isDown ? '▼' : '▲'} {Math.abs(change).toFixed(1)}% (전일 대비)
-              </p>
-            ) : (
-              <p className="text-xs text-gray-600 mt-0.5">전일 비교 없음</p>
-            )}
+            <div className="flex items-center gap-2 mt-0.5">
+              {change !== null && (
+                <p className={`text-xs font-semibold ${isDown ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {isDown ? '▼' : '▲'} {Math.abs(change).toFixed(1)}%
+                </p>
+              )}
+              {records.length >= 3 && (
+                <p className={`text-xs font-semibold ${isPriceLow ? 'text-emerald-400' : isPriceHigh ? 'text-red-400' : 'text-slate-400'}`}>
+                  {isPriceLow ? '🟢 현재 저렴' : isPriceHigh ? '🔴 현재 비쌈' : '⚪ 보통'}
+                </p>
+              )}
+            </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-500">역대 최저가</p>
-            <p className="text-sm font-bold text-green-400">{formatKRW(allTimeLow)}</p>
+            <p className="text-[10px] text-slate-500">최저 / 최고</p>
+            <p className="text-xs font-bold">
+              <span className="text-emerald-400">{formatKRW(allTimeLow)}</span>
+              <span className="text-slate-600"> / </span>
+              <span className="text-red-400">{formatKRW(allTimeHigh)}</span>
+            </p>
           </div>
         </div>
 
         {prices.length >= 2 ? (
           <LineChart records={records} />
         ) : (
-          <p className="text-xs text-gray-600 py-8 text-center">내일부터 추이가 표시됩니다</p>
+          <p className="text-xs text-slate-600 py-8 text-center">내일부터 추이가 표시됩니다</p>
         )}
-        <p className="text-xs text-gray-600 mt-1 text-right">{records.length}일치 데이터</p>
+        <p className="text-[10px] text-slate-600 mt-1 text-right">{records.length}일치 데이터</p>
       </div>
     </section>
   );

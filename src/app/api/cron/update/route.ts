@@ -5,12 +5,6 @@ import type { DashboardData } from '@/lib/types';
 
 export const maxDuration = 60;
 
-function addDays(today: Date, days: number): string {
-  const d = new Date(today);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
 export async function GET(req: NextRequest) {
   // Vercel Cron은 Authorization: Bearer <CRON_SECRET> 헤더를 자동 추가
   const auth = req.headers.get('authorization');
@@ -28,11 +22,6 @@ export async function GET(req: NextRequest) {
 
     const data: DashboardData = {
       updatedAt: today.toISOString(),
-      searchDates: {
-        plus14: addDays(today, 14),
-        plus30: addDays(today, 30),
-        plus45: addDays(today, 45),
-      },
       japanDeals: [],
       japanAllRoutes: japanDeals,
       nzFlights,

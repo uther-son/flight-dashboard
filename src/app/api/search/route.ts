@@ -4,12 +4,6 @@ import { fetchJapanRoutes, fetchNzRoutes } from '@/lib/myrealtrip';
 
 export const maxDuration = 60;
 
-function addDays(today: Date, days: number): string {
-  const d = new Date(today);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
 export async function POST() {
   try {
     const today = new Date();
@@ -18,13 +12,15 @@ export async function POST() {
       fetchNzRoutes(),
     ]);
 
+    if (japanRoutes.length === 0 && nzFlights.length === 0) {
+      return NextResponse.json(
+        { error: 'MCP 조회 실패 (인증/429 등) — 기존 결과 유지, 저장하지 않음' },
+        { status: 502 },
+      );
+    }
+
     const data = {
       updatedAt: today.toISOString(),
-      searchDates: {
-        plus14: addDays(today, 14),
-        plus30: addDays(today, 30),
-        plus45: addDays(today, 45),
-      },
       japanDeals: japanRoutes.filter(r => r.price <= 150000),
       japanAllRoutes: japanRoutes,
       nzFlights,

@@ -19,6 +19,9 @@ function EmptyState({ message }: { message: string }) {
 export default async function Dashboard() {
   const [data, history] = await Promise.all([getLatestResults(), getHistory()]);
 
+  const japanAllDeals = data?.japanAllRoutes ?? data?.japanDeals ?? [];
+  const japanSpecials = japanAllDeals.filter(d => d.price <= 150000);
+
   return (
     <main className="min-h-screen max-w-md mx-auto px-4 pb-10 pt-6">
 
@@ -33,26 +36,31 @@ export default async function Dashboard() {
         <SearchButton initialUpdatedAt={data?.updatedAt ?? null} />
       </div>
 
-      {/* 일본 노선 */}
-      <section className="mb-8">
-        <h2 className="text-base font-bold mb-0.5">🇯🇵 일본</h2>
+      {/* ─────────────────────────────────────────
+          섹션 1: 항공권 조회
+          목적: 오늘 조회된 최저가·특가 확인 후 예약 결정
+      ───────────────────────────────────────── */}
+
+      {/* 1-1. 일본 노선 */}
+      <section className="mb-6">
+        <h2 className="text-base font-bold mb-0.5">🇯🇵 일본 최저가</h2>
         <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5 flex-wrap">
-          <span>직항 3박 · +14/+30/+45일 출발 · ₩150,000 이하 🔥 특가</span>
-          <SearchCriteriaTooltip searchDates={data?.searchDates} />
+          <span>이번달~다음달 도시별 최저가 · 직항 3박 · ₩150,000 이하 🔥 특가</span>
+          <SearchCriteriaTooltip />
         </p>
         {!data ? (
           <EmptyState message="검색 결과 없음 · 오전 10시 자동 검색 또는 직접 조회" />
-        ) : (data.japanAllRoutes ?? data.japanDeals).length === 0 ? (
+        ) : japanAllDeals.length === 0 ? (
           <EmptyState message="현재 검색된 항공권이 없습니다" />
         ) : (
           <ExpandableDealList
-            deals={(data.japanAllRoutes ?? data.japanDeals).slice().sort((a, b) => a.price - b.price)}
+            deals={japanAllDeals.slice().sort((a, b) => a.price - b.price)}
             threshold={150000}
           />
         )}
       </section>
 
-      {/* 뉴질랜드 노선 */}
+      {/* 1-2. 뉴질랜드 노선 */}
       <section className="mb-8">
         <h2 className="text-base font-bold mb-0.5">🇳🇿 뉴질랜드</h2>
         <p className="text-xs text-slate-500 mb-3">
@@ -75,28 +83,21 @@ export default async function Dashboard() {
         )}
       </section>
 
-      {/* 내 휴가 기준 (결과 있을 때만 표시) */}
-      {data?.vacationSearch && data.vacationSearch.flights.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-base font-bold mb-0.5">📅 내 휴가 기준</h2>
-          <p className="text-xs text-slate-500 mb-3">
-            Google Calendar 휴가 · {data.vacationSearch.period} · 일본 10개 노선
-          </p>
-          <ExpandableDealList
-            deals={data.vacationSearch.flights.slice().sort((a, b) => a.price - b.price)}
-            threshold={150000}
-          />
-        </section>
-      )}
+      {/* ─────────────────────────────────────────
+          섹션 2: 가격 추이
+          목적: 지금 가격이 역대 흐름상 저렴한지 판단
+      ───────────────────────────────────────── */}
+      <PriceTrend history={history} />
 
-      {/* 추천 여행 일자 */}
+      {/* ─────────────────────────────────────────
+          섹션 3: 추천 여행 일자
+          목적: 항공권 날짜가 내 휴가·공휴일과 겹치는지 확인
+      ───────────────────────────────────────── */}
       <TravelCalendar
         calendarEvents={data?.calendarEvents}
         updatedAt={data?.updatedAt}
+        japanDeals={japanAllDeals}
       />
-
-      {/* 가격 추이 */}
-      <PriceTrend history={history} />
 
     </main>
   );

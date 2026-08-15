@@ -49,7 +49,11 @@ function normalizeDeal(raw: Record<string, unknown>, defaultRoute?: [string, str
   const codes = parseRouteCodes(raw) ?? defaultRoute ?? null;
   const [origin, dest] = codes ?? ['', ''];
   const routeId = origin && dest ? `${origin}_${dest}` : ((raw.routeId as string) || (raw.route as string) || '');
-  const routeName = origin && dest ? formatRouteName(origin, dest) : ((raw.routeName as string) || routeId);
+  // Preserve city-level names (format: "도시 · 출발→도착") from myrealtrip.ts
+  const storedName = raw.routeName as string;
+  const routeName = (storedName?.includes('·'))
+    ? storedName
+    : (origin && dest ? formatRouteName(origin, dest) : (storedName || routeId));
 
   // nights: 없으면 날짜 차이로 계산
   const depart = new Date(raw.departDate as string);
@@ -105,7 +109,7 @@ export function normalizeData(data: DashboardData): DashboardData {
 
 const RESULTS_KEY = 'flight_results';
 const HISTORY_KEY = 'flight_history';
-const MAX_RECORDS = 30;
+const MAX_RECORDS = 365;
 
 async function upstashGet(key: string): Promise<string | null> {
   try {
@@ -173,7 +177,11 @@ export async function getHistory(): Promise<FlightHistory> {
         continue;
       }
 
-      cleaned[route.routeId] = { ...route, routeName: deriveHistoryRouteName(route.routeId), records };
+      // Preserve city-level names stored by new fetch logic; derive only for old/plain records
+      const displayName = route.routeName?.includes('·')
+        ? route.routeName
+        : deriveHistoryRouteName(route.routeId);
+      cleaned[route.routeId] = { ...route, routeName: displayName, records };
     }
     return cleaned;
   } catch {

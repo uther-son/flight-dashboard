@@ -18,7 +18,7 @@ export interface CalendarEvent {
 
 export interface DashboardData {
   updatedAt: string;
-  searchDates: { plus14: string; plus30: string; plus45: string };
+  searchDates?: { plus14: string; plus30: string; plus45: string };
   japanDeals: FlightDeal[];
   japanAllRoutes?: FlightDeal[];
   vacationSearch: { period: string; flights: FlightDeal[] } | null;
