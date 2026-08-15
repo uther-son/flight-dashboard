@@ -12,7 +12,7 @@ const AIRLINE_MAP: Record<string, string> = {
 const AIRPORT_MAP: Record<string, string> = {
   ICN: '인천', GMP: '김포', HND: '하네다', NRT: '나리타', KIX: '간사이',
   FUK: '후쿠오카', NGO: '나고야', CTS: '삿포로', KMJ: '구마모토', OKA: '오키나와',
-  AKL: '오클랜드',
+  SYD: '시드니',
 };
 
 function formatRouteName(origin: string, dest: string): string {
@@ -81,11 +81,10 @@ function normalizeDeals(arr: unknown, defaultRoute?: [string, string]): FlightDe
 }
 
 export function normalizeData(data: DashboardData): DashboardData {
-  // 루틴이 보내는 필드명 변형 처리: japanRoutes→japanDeals, nzRoutes→nzFlights, runAt→updatedAt
+  // 루틴이 보내는 필드명 변형 처리: japanRoutes→japanDeals, runAt→updatedAt
   const raw = data as unknown as Record<string, unknown>;
   const japanSrc = (data.japanDeals?.length ? data.japanDeals : raw.japanRoutes) as unknown[] | undefined ?? [];
   const japanAllSrc = (data.japanAllRoutes ?? raw.japanAllRoutes) as unknown[] | undefined;
-  const nzSrc = (data.nzFlights?.length ? data.nzFlights : raw.nzRoutes) as unknown[] | undefined ?? [];
   const updatedAt = data.updatedAt || (raw.runAt as string) || new Date().toISOString();
 
   return {
@@ -93,7 +92,7 @@ export function normalizeData(data: DashboardData): DashboardData {
     updatedAt,
     japanDeals: normalizeDeals(japanSrc),
     japanAllRoutes: japanAllSrc ? normalizeDeals(japanAllSrc) : undefined,
-    nzFlights: normalizeDeals(nzSrc, ['ICN', 'AKL']),
+    sydneyFlights: normalizeDeals(data.sydneyFlights, ['ICN', 'SYD']),
   };
 }
 
@@ -186,8 +185,8 @@ export async function updateHistory(data: DashboardData): Promise<void> {
       }
     }
 
-    // NZ 추이 추적
-    for (const deal of data.nzFlights) {
+    // 시드니 추이 추적 (출발 윈도우별로 구분)
+    for (const deal of data.sydneyFlights) {
       const key = `${deal.routeId}_${deal.departDate}`;
       if (!history[key]) {
         history[key] = { routeId: key, routeName: `${deal.routeName} (${deal.departDate} 출발)`, records: [] };

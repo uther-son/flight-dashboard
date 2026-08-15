@@ -13,16 +13,15 @@ const JAPAN_CITIES: { city: string; routes: [string, string][] }[] = [
   { city: '오키나와', routes: [['ICN', 'OKA']] },
 ];
 
-const NZ_TRIPS = [
-  { departDate: '2027-01-05', returnDate: '2027-02-02', nights: 28 },
-  { departDate: '2027-02-01', returnDate: '2027-03-01', nights: 28 },
-  { departDate: '2027-03-01', returnDate: '2027-03-29', nights: 28 },
-];
+// 출발일은 이 기간 내에서 가장 싼 날짜를 자동 탐색, 체류 기간은 고정
+const SYD_SEARCH_START = '2026-11-01';
+const SYD_SEARCH_END = '2027-01-31';
+const SYD_NIGHTS = 20;
 
 const AIRPORT_MAP: Record<string, string> = {
   ICN: '인천', GMP: '김포', HND: '하네다', NRT: '나리타', KIX: '간사이',
   FUK: '후쿠오카', NGO: '나고야', CTS: '삿포로', KMJ: '구마모토', OKA: '오키나와',
-  AKL: '오클랜드',
+  SYD: '시드니',
 };
 
 function makeRouteName(city: string, origin: string, dest: string): string {
@@ -32,6 +31,12 @@ function makeRouteName(city: string, origin: string, dest: string): string {
 function yyyymmddToIso(s: string): string {
   if (s.includes('-')) return s;
   return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+}
+
+function addDays(iso: string, days: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
 interface McpFlightItem {
@@ -133,13 +138,14 @@ async function getFareCandidates(
     .slice(0, 5); // 상위 5개 후보 (가장 싼 날짜들)
 }
 
-// 특정 날짜에 실제 예약 가능한 직항편 검색
+// 특정 날짜에 실제 예약 가능한 편 검색
 async function searchFlight(
   origin: string,
   dest: string,
   departDate: string,
   returnDate: string,
   city: string,
+  directOnly = true,
 ): Promise<FlightDeal | null> {
   const raw = await callMcpTool('searchInternationalFlights', {
     tripType: 'ROUND_TRIP',
@@ -147,7 +153,7 @@ async function searchFlight(
     destination: dest,
     departDate,
     returnDate,
-    directFlightOnly: true,
+    directFlightOnly: directOnly,
     maxResults: 1,
   }) as McpFlightResult | null;
 
@@ -220,45 +226,29 @@ export async function fetchJapanRoutes(today: Date): Promise<FlightDeal[]> {
   return deals.filter((d): d is FlightDeal => d !== null);
 }
 
-export async function fetchNzRoutes(): Promise<FlightDeal[]> {
-  const tasks = NZ_TRIPS.map(({ departDate, returnDate }) =>
-    async () => {
-      const raw = await callMcpTool('searchInternationalFlights', {
-        tripType: 'ROUND_TRIP',
-        origin: 'ICN',
-        destination: 'AKL',
-        departDate,
-        returnDate,
-        directFlightOnly: false,
-        maxResults: 1,
-      }) as McpFlightResult | null;
+// SYD_SEARCH_START~SYD_SEARCH_END 구간 내 최저가 출발일 후보 조회
+async function getSydneyFareCandidates(): Promise<FareCalendarItem[]> {
+  const raw = await callMcpTool('flightsFareCalendar', {
+    from: 'ICN',
+    to: 'SYD',
+    departureDate: SYD_SEARCH_START,
+    period: 3,
+    transfer: 0,
+    maxResults: 180,
+  }) as FareCalendarResponse | null;
 
-      const item = raw?.result?.items?.[0];
-      if (!item) return null;
+  return (raw?.result?.items ?? [])
+    .filter(item => item.departureDate >= SYD_SEARCH_START && item.departureDate <= SYD_SEARCH_END)
+    .slice(0, 5); // 상위 5개 후보 (가장 싼 날짜들)
+}
 
-      const dep = yyyymmddToIso(item.travelInfo.departDate);
-      const ret = yyyymmddToIso(item.travelInfo.returnDate);
-      const nights = Math.round((new Date(ret).getTime() - new Date(dep).getTime()) / 86400000);
-
-      return {
-        routeId: 'ICN_AKL',
-        routeName: `뉴질랜드 · 인천→오클랜드`,
-        departDate: dep,
-        returnDate: ret,
-        nights,
-        price: item.price.total,
-        airline: item.airline.name,
-        direct: item.travelInfo.isDirect,
-        durationMinutes: item.legs?.[0]?.durationMinutes ?? 0,
-        url: item.reservationUrl,
-      };
-    },
-  );
-
-  const results = await runBatched(tasks, 3);
-  return NZ_TRIPS.flatMap(({ departDate, returnDate, nights }, i) => {
-    const deal = results[i];
-    if (!deal) return [];
-    return [{ ...deal, departDate, returnDate, nights }];
-  });
+export async function fetchSydneyRoutes(): Promise<FlightDeal[]> {
+  const candidates = await getSydneyFareCandidates();
+  for (const candidate of candidates) {
+    const departDate = yyyymmddToIso(candidate.departureDate);
+    const returnDate = addDays(departDate, SYD_NIGHTS);
+    const deal = await searchFlight('ICN', 'SYD', departDate, returnDate, '호주', false);
+    if (deal) return [deal];
+  }
+  return [];
 }

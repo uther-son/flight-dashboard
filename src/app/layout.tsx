@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: '✈ 항공권 특가',
-  description: '일본 · 뉴질랜드 항공권 특가 모니터링',
+  description: '일본 · 시드니 항공권 특가 모니터링',
 };
 
 export const viewport: Viewport = {

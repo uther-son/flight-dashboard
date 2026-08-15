@@ -4,12 +4,12 @@ import { useState } from 'react';
 import type { FlightHistory, RouteHistory, PriceRecord } from '@/lib/types';
 import { formatKRW } from '@/lib/format';
 
-function isNz(routeId: string): boolean {
-  return routeId.includes('AKL');
+function isSydney(routeId: string): boolean {
+  return routeId.includes('SYD');
 }
 
 // "도시 · 출발→도착 (YYYY-MM-DD 출발)" 또는 "후쿠오카(FUK)" 형식에서 짧은 이름만 추출.
-// 뉴질랜드처럼 노선명은 같고 출발일만 다른 경우, 날짜가 있으면 그걸로 구분한다.
+// 시드니처럼 노선명은 같고 출발일만 다른 경우, 날짜가 있으면 그걸로 구분한다.
 function buttonLabel(route: RouteHistory): string {
   const dateMatch = route.routeName.match(/\((\d{4})-(\d{2})-\d{2} 출발\)/);
   if (dateMatch) return `${Number(dateMatch[2])}월 출발`;
@@ -79,8 +79,8 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
   const routes = Object.values(history)
     .filter(r => r.records.length > 0)
     .sort((a, b) => a.routeName.localeCompare(b.routeName));
-  const japanRoutes = routes.filter(r => !isNz(r.routeId));
-  const nzRoutes = routes.filter(r => isNz(r.routeId));
+  const japanRoutes = routes.filter(r => !isSydney(r.routeId));
+  const sydRoutes = routes.filter(r => isSydney(r.routeId));
 
   const [selectedId, setSelectedId] = useState(routes[0]?.routeId ?? '');
 
@@ -132,11 +132,11 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
             </div>
           </div>
         )}
-        {nzRoutes.length > 0 && (
+        {sydRoutes.length > 0 && (
           <div>
-            <p className="text-xs text-slate-600 mb-1.5">🇳🇿 뉴질랜드</p>
+            <p className="text-xs text-slate-600 mb-1.5">🇦🇺 시드니</p>
             <div className="flex flex-wrap gap-1.5">
-              {nzRoutes.map(r => (
+              {sydRoutes.map(r => (
                 <button
                   key={r.routeId}
                   onClick={() => setSelectedId(r.routeId)}

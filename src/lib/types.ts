@@ -21,7 +21,7 @@ export interface DashboardData {
   updatedAt: string;
   japanDeals: FlightDeal[];
   japanAllRoutes?: FlightDeal[];
-  nzFlights: FlightDeal[];
+  sydneyFlights: FlightDeal[];
   calendarEvents?: CalendarEvent[]; // Google Calendar 휴가 일정
 }
 

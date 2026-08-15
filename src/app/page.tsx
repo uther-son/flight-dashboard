@@ -60,19 +60,19 @@ export default async function Dashboard() {
         )}
       </section>
 
-      {/* 1-2. 뉴질랜드 노선 */}
+      {/* 1-2. 시드니 노선 */}
       <section className="mb-8">
-        <h2 className="text-base font-bold mb-0.5">🇳🇿 뉴질랜드</h2>
+        <h2 className="text-base font-bold mb-0.5">🇦🇺 시드니</h2>
         <p className="text-xs text-slate-500 mb-3">
-          ICN → AKL · 2027년 1–3월 · 28박 1인 왕복 · ₩900,000 이하 🔥 특가
+          ICN → SYD · 2026년 11월–2027년 1월 · 20박 1인 왕복 · ₩900,000 이하 🔥 특가
         </p>
         {!data ? (
           <EmptyState message="검색 결과 없음 · 오전 10시 30분 자동 검색 또는 직접 조회" />
-        ) : data.nzFlights.length === 0 ? (
+        ) : data.sydneyFlights.length === 0 ? (
           <EmptyState message="현재 검색된 항공권이 없습니다" />
         ) : (
           <ExpandableDealList
-            deals={data.nzFlights.slice().sort((a, b) => a.price - b.price)}
+            deals={data.sydneyFlights.slice().sort((a, b) => a.price - b.price)}
             threshold={900000}
           />
         )}
