@@ -5,6 +5,7 @@ import { PriceTrend } from '@/components/PriceTrend';
 import { TravelCalendar } from '@/components/TravelCalendar';
 import { SearchButton } from '@/components/SearchButton';
 import { SearchCriteriaTooltip } from '@/components/SearchCriteriaTooltip';
+import { BackToTopButton } from '@/components/BackToTopButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ export default async function Dashboard() {
         <div>
           <h1 className="text-xl font-bold tracking-tight">✈ 항공권 특가</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            {data ? `업데이트 ${formatUpdatedAt(data.updatedAt)}` : '매일 오전 10시 자동 검색'}
+            {data ? `업데이트 ${formatUpdatedAt(data.updatedAt)}` : '매일 오전 10시 30분 자동 검색'}
           </p>
         </div>
         <SearchButton initialUpdatedAt={data?.updatedAt ?? null} />
@@ -49,7 +50,7 @@ export default async function Dashboard() {
           <SearchCriteriaTooltip />
         </p>
         {!data ? (
-          <EmptyState message="검색 결과 없음 · 오전 10시 자동 검색 또는 직접 조회" />
+          <EmptyState message="검색 결과 없음 · 오전 10시 30분 자동 검색 또는 직접 조회" />
         ) : japanAllDeals.length === 0 ? (
           <EmptyState message="현재 검색된 항공권이 없습니다" />
         ) : (
@@ -67,7 +68,7 @@ export default async function Dashboard() {
           ICN → AKL · 2027년 1–3월 · 28박 1인 왕복 · ₩900,000 이하 🔥 특가
         </p>
         {!data ? (
-          <EmptyState message="검색 결과 없음 · 오전 10시 자동 검색 또는 직접 조회" />
+          <EmptyState message="검색 결과 없음 · 오전 10시 30분 자동 검색 또는 직접 조회" />
         ) : data.nzFlights.length === 0 ? (
           <EmptyState message="현재 검색된 항공권이 없습니다" />
         ) : (
@@ -98,6 +99,8 @@ export default async function Dashboard() {
         updatedAt={data?.updatedAt}
         japanDeals={japanAllDeals}
       />
+
+      <BackToTopButton />
 
     </main>
   );

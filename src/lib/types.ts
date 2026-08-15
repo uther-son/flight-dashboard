@@ -18,10 +18,8 @@ export interface CalendarEvent {
 
 export interface DashboardData {
   updatedAt: string;
-  searchDates?: { plus14: string; plus30: string; plus45: string };
   japanDeals: FlightDeal[];
   japanAllRoutes?: FlightDeal[];
-  vacationSearch: { period: string; flights: FlightDeal[] } | null;
   nzFlights: FlightDeal[];
   calendarEvents?: CalendarEvent[]; // Google Calendar 휴가 일정
 }

@@ -100,10 +100,6 @@ export function normalizeData(data: DashboardData): DashboardData {
     japanDeals: normalizeDeals(japanSrc),
     japanAllRoutes: japanAllSrc ? normalizeDeals(japanAllSrc) : undefined,
     nzFlights: normalizeDeals(nzSrc, ['ICN', 'AKL']),
-    vacationSearch: data.vacationSearch ? {
-      ...data.vacationSearch,
-      flights: normalizeDeals(data.vacationSearch.flights),
-    } : null,
   };
 }
 
