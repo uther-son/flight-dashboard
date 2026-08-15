@@ -27,7 +27,7 @@ export function SearchCriteriaTooltip() {
           <p className="text-xs font-semibold text-slate-300 mb-2">일본 노선 검색 기준</p>
           <div className="space-y-1.5 text-xs text-slate-400">
             <p>도쿄 · 오사카 · 후쿠오카 · 나고야 · 삿포로 · 구마모토 · 오키나와</p>
-            <p className="text-slate-500 pt-1 border-t border-slate-700">이번달~다음달 (62일 이내) 중 도시별 최저가 출발일 · 직항 3박</p>
+            <p className="text-slate-500 pt-1 border-t border-slate-700">오늘부터 6개월(180일) 이내 중 도시별 최저가 출발일 · 직항 3박</p>
           </div>
         </div>
       )}

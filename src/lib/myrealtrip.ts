@@ -13,9 +13,7 @@ const JAPAN_CITIES: { city: string; routes: [string, string][] }[] = [
   { city: '오키나와', routes: [['ICN', 'OKA']] },
 ];
 
-// 출발일은 이 기간 내에서 가장 싼 날짜를 자동 탐색, 체류 기간은 고정
-const SYD_SEARCH_START = '2026-11-01';
-const SYD_SEARCH_END = '2027-01-31';
+// 오늘부터 최대 6개월(180일, myrealtrip fare calendar 한도) 이내 최저가 출발일 자동 탐색, 체류 기간은 고정
 const SYD_NIGHTS = 20;
 
 const AIRPORT_MAP: Record<string, string> = {
@@ -114,7 +112,7 @@ async function callMcpTool(toolName: string, args: Record<string, unknown>): Pro
   }
 }
 
-// 이번달~다음달(62일 이내) 최저가 날짜 목록 반환
+// 오늘부터 최대 180일(myrealtrip fare calendar 한도) 이내 최저가 날짜 목록 반환
 async function getFareCandidates(
   origin: string,
   dest: string,
@@ -226,24 +224,8 @@ export async function fetchJapanRoutes(today: Date): Promise<FlightDeal[]> {
   return deals.filter((d): d is FlightDeal => d !== null);
 }
 
-// SYD_SEARCH_START~SYD_SEARCH_END 구간 내 최저가 출발일 후보 조회
-async function getSydneyFareCandidates(): Promise<FareCalendarItem[]> {
-  const raw = await callMcpTool('flightsFareCalendar', {
-    from: 'ICN',
-    to: 'SYD',
-    departureDate: SYD_SEARCH_START,
-    period: 3,
-    transfer: 0,
-    maxResults: 180,
-  }) as FareCalendarResponse | null;
-
-  return (raw?.result?.items ?? [])
-    .filter(item => item.departureDate >= SYD_SEARCH_START && item.departureDate <= SYD_SEARCH_END)
-    .slice(0, 5); // 상위 5개 후보 (가장 싼 날짜들)
-}
-
-export async function fetchSydneyRoutes(): Promise<FlightDeal[]> {
-  const candidates = await getSydneyFareCandidates();
+export async function fetchSydneyRoutes(today: Date): Promise<FlightDeal[]> {
+  const candidates = await getFareCandidates('ICN', 'SYD', today);
   for (const candidate of candidates) {
     const departDate = yyyymmddToIso(candidate.departureDate);
     const returnDate = addDays(departDate, SYD_NIGHTS);
