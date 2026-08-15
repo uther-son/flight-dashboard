@@ -11,11 +11,17 @@ export const maxDuration = 60;
 // calendarEvents는 루틴만 알고 있으므로, 수동 버튼처럼 전달이 없을 땐 기존 저장값을 그대로 유지한다.
 async function runSearch(calendarEvents: CalendarEvent[] | undefined) {
   const today = new Date();
-  const [japanRoutes, nzFlights, previous] = await Promise.all([
+  let [japanRoutes, nzFlights, previous] = await Promise.all([
     fetchJapanRoutes(today),
     fetchNzRoutes(),
     calendarEvents ? Promise.resolve(null) : getLatestResults(),
   ]);
+
+  // 완전 실패는 대개 MCP 순간 요청제한(rate limit) — 한 번 짧게 쉬고 재시도
+  if (japanRoutes.length === 0 && nzFlights.length === 0) {
+    await new Promise(r => setTimeout(r, 3000));
+    [japanRoutes, nzFlights] = await Promise.all([fetchJapanRoutes(today), fetchNzRoutes()]);
+  }
 
   if (japanRoutes.length === 0 && nzFlights.length === 0) {
     return NextResponse.json(
