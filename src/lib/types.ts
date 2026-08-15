@@ -7,6 +7,7 @@ export interface FlightDeal {
   price: number;
   airline: string;
   direct: boolean;
+  durationMinutes: number; // 가는 편 비행 시간(분)
   url: string;
 }
 

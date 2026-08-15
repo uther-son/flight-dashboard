@@ -1,5 +1,5 @@
 import type { FlightDeal } from '@/lib/types';
-import { formatKRW, formatDate } from '@/lib/format';
+import { formatKRW, formatDate, formatDuration } from '@/lib/format';
 
 export function DealCard({ deal, threshold = 150000 }: { deal: FlightDeal; threshold?: number }) {
   const isSpecial = deal.price <= threshold;
@@ -16,9 +16,11 @@ export function DealCard({ deal, threshold = 150000 }: { deal: FlightDeal; thres
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
-          {deal.direct && (
-            <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full leading-none">직항</span>
-          )}
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
+            deal.direct ? 'bg-slate-800 text-slate-400' : 'bg-slate-800 text-amber-400'
+          }`}>
+            {deal.direct ? '직항' : '경유'}
+          </span>
           {isSpecial && (
             <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full leading-none font-semibold">🔥 특가</span>
           )}
@@ -27,7 +29,9 @@ export function DealCard({ deal, threshold = 150000 }: { deal: FlightDeal; thres
         <p className="text-xs text-slate-400 mt-0.5">
           {formatDate(deal.departDate)} → {formatDate(deal.returnDate)} · {deal.nights}박
         </p>
-        <p className="text-xs text-slate-500 mt-0.5">{deal.airline}</p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          {deal.airline}{deal.durationMinutes > 0 && ` · 비행 ${formatDuration(deal.durationMinutes)}`}
+        </p>
       </div>
       <div className="shrink-0 text-right">
         <p className={`text-xl font-bold tabular-nums leading-none ${isSpecial ? 'text-amber-300' : 'text-white'}`}>

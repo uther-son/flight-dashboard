@@ -37,6 +37,7 @@ function yyyymmddToIso(s: string): string {
 interface McpFlightItem {
   airline: { code: string; name: string };
   travelInfo: { departDate: string; returnDate: string; isDirect: boolean };
+  legs: Array<{ durationMinutes: number }>;
   price: { total: number };
   reservationUrl: string;
 }
@@ -166,6 +167,7 @@ async function searchFlight(
     price: item.price.total,
     airline: item.airline.name,
     direct: item.travelInfo.isDirect,
+    durationMinutes: item.legs?.[0]?.durationMinutes ?? 0,
     url: item.reservationUrl,
   };
 }
@@ -247,6 +249,7 @@ export async function fetchNzRoutes(): Promise<FlightDeal[]> {
         price: item.price.total,
         airline: item.airline.name,
         direct: item.travelInfo.isDirect,
+        durationMinutes: item.legs?.[0]?.durationMinutes ?? 0,
         url: item.reservationUrl,
       };
     },

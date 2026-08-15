@@ -1,5 +1,5 @@
 import { getLatestResults, getHistory } from '@/lib/storage';
-import { formatKRW, formatUpdatedAt } from '@/lib/format';
+import { formatUpdatedAt } from '@/lib/format';
 import { ExpandableDealList } from '@/components/ExpandableDealList';
 import { PriceTrend } from '@/components/PriceTrend';
 import { TravelCalendar } from '@/components/TravelCalendar';
@@ -21,7 +21,6 @@ export default async function Dashboard() {
   const [data, history] = await Promise.all([getLatestResults(), getHistory()]);
 
   const japanAllDeals = data?.japanAllRoutes ?? data?.japanDeals ?? [];
-  const japanSpecials = japanAllDeals.filter(d => d.price <= 150000);
 
   return (
     <main className="min-h-screen max-w-md mx-auto px-4 pb-10 pt-6">
@@ -72,15 +71,10 @@ export default async function Dashboard() {
         ) : data.nzFlights.length === 0 ? (
           <EmptyState message="현재 검색된 항공권이 없습니다" />
         ) : (
-          <>
-            <ExpandableDealList
-              deals={data.nzFlights.slice().sort((a, b) => a.price - b.price)}
-              threshold={900000}
-            />
-            <p className="text-xs text-slate-600 mt-1 text-center">
-              최저가 기준 3인 총액 {formatKRW(Math.min(...data.nzFlights.map(f => f.price)) * 3)}
-            </p>
-          </>
+          <ExpandableDealList
+            deals={data.nzFlights.slice().sort((a, b) => a.price - b.price)}
+            threshold={900000}
+          />
         )}
       </section>
 

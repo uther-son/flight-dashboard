@@ -8,8 +8,11 @@ function isNz(routeId: string): boolean {
   return routeId.includes('AKL');
 }
 
-// "도시 · 출발→도착" 또는 "후쿠오카(FUK)" 형식에서 짧은 이름만 추출
+// "도시 · 출발→도착 (YYYY-MM-DD 출발)" 또는 "후쿠오카(FUK)" 형식에서 짧은 이름만 추출.
+// 뉴질랜드처럼 노선명은 같고 출발일만 다른 경우, 날짜가 있으면 그걸로 구분한다.
 function buttonLabel(route: RouteHistory): string {
+  const dateMatch = route.routeName.match(/\((\d{4})-(\d{2})-\d{2} 출발\)/);
+  if (dateMatch) return `${Number(dateMatch[2])}월 출발`;
   const dotIdx = route.routeName.indexOf('·');
   if (dotIdx > 0) return route.routeName.slice(0, dotIdx).trim();
   const parenIdx = route.routeName.indexOf('(');

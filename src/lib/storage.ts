@@ -70,6 +70,7 @@ function normalizeDeal(raw: Record<string, unknown>, defaultRoute?: [string, str
     price: raw.price as number,
     airline,
     direct: typeof raw.direct === 'boolean' ? raw.direct : true,
+    durationMinutes: typeof raw.durationMinutes === 'number' ? raw.durationMinutes : 0,
     url: ((raw.url as string) || (raw.reservationUrl as string) || 'https://www.myrealtrip.com/flights'),
   };
 }
