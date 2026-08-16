@@ -100,14 +100,24 @@ function WindowCard({ label, type, start, end, nights, matchedDeals }: {
   const isPersonal = type === 'personal';
   const bestDeal = matchedDeals[0];
 
+  // 항공권이 있으면 카드 전체를 최저가 항공권 예약 링크로 — 작은 링크 텍스트만 터치 영역이라
+  // 누르기 어렵다는 피드백에 따른 것. 노선별로 각각 다른 곳으로 보내려면 별도 터치 영역 로직 필요.
+  const Wrapper = bestDeal ? 'a' : 'div';
+  const wrapperProps = bestDeal
+    ? { href: bestDeal.url, target: '_blank', rel: 'noopener noreferrer' }
+    : {};
+
   return (
-    <div className={`rounded-2xl p-4 mb-2 border ${
-      bestDeal
-        ? 'bg-emerald-950/40 border-emerald-700/50'
-        : isPersonal
-        ? 'bg-slate-800 border-slate-600/50'
-        : 'bg-slate-900 border-slate-700/50'
-    }`}>
+    <Wrapper
+      {...wrapperProps}
+      className={`block rounded-2xl p-4 mb-2 border ${
+        bestDeal
+          ? 'bg-emerald-950/40 border-emerald-700/50 active:scale-[0.98] transition'
+          : isPersonal
+          ? 'bg-slate-800 border-slate-600/50'
+          : 'bg-slate-900 border-slate-700/50'
+      }`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -122,17 +132,11 @@ function WindowCard({ label, type, start, end, nights, matchedDeals }: {
           {bestDeal && (
             <div className="mt-2 space-y-0.5">
               {matchedDeals.slice(0, 2).map((deal, i) => (
-                <a
-                  key={i}
-                  href={deal.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-emerald-300 hover:text-emerald-200"
-                >
+                <div key={i} className="flex items-center gap-1.5 text-xs text-emerald-300">
                   ✈ {cityFromName(deal.routeName)}
                   <span className="font-bold tabular-nums">{formatKRW(deal.price)}</span>
-                  <span className="text-emerald-600">· {deal.departDate.slice(5)} 출발 →</span>
-                </a>
+                  <span className="text-emerald-600">· {deal.departDate.slice(5)} 출발</span>
+                </div>
               ))}
               {matchedDeals.length > 2 && (
                 <p className="text-[10px] text-emerald-700">+{matchedDeals.length - 2}개 노선 더보기</p>
@@ -143,10 +147,10 @@ function WindowCard({ label, type, start, end, nights, matchedDeals }: {
         <div className="text-right shrink-0">
           <p className="text-xl font-bold text-white">{nights}박</p>
           <p className="text-xs text-slate-500">D-{daysUntil(start)}</p>
-          {bestDeal && <p className="text-[10px] text-emerald-500 mt-0.5">항공권 ✓</p>}
+          {bestDeal && <p className="text-[10px] text-emerald-500 mt-0.5">예약 →</p>}
         </div>
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
