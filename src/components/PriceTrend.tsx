@@ -134,7 +134,7 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
         )}
         {sydRoutes.length > 0 && (
           <div>
-            <p className="text-xs text-slate-600 mb-1.5">🇦🇺 시드니</p>
+            <p className="text-xs text-slate-600 mb-1.5">🇦🇺 호주</p>
             <div className="flex flex-wrap gap-1.5">
               {sydRoutes.map(r => (
                 <button
