@@ -8,9 +8,8 @@ const AIRPORT_MAP: Record<string, string> = {
 };
 
 // 가격 추이는 출발 공항(인천/김포)을 구분하지 않고 도착지 기준으로만 추적.
-// 시드니는 도시 대신 국가명(호주)으로 라벨링 — 일본처럼 여러 도시가 아니라 단일 목적지라서
+// 탭/카드에는 일본과 동일하게 지역명을 쓴다 — 국가명(호주)은 섹션 상단 그룹 라벨에서만 사용
 function destOnlyName(dest: string): string {
-  if (dest === 'SYD') return '호주(SYD)';
   return `${AIRPORT_MAP[dest] ?? dest}(${dest})`;
 }
 
@@ -85,7 +84,9 @@ export async function getHistory(): Promise<FlightHistory> {
         r => typeof r?.price === 'number' && !Number.isNaN(r.price) && typeof r?.date === 'string'
       );
       if (records.length === 0) continue;
-      cleaned[key] = { ...route, records };
+      // routeName은 저장 시점이 아니라 매번 키로부터 새로 계산 — 저장된 이름이 예전
+      // 네이밍 규칙 그대로 굳어버리는 걸 방지 (라벨 규칙이 바뀌면 과거 기록에도 바로 반영됨)
+      cleaned[key] = { ...route, routeName: destOnlyName(key), records };
     }
     return cleaned;
   } catch {

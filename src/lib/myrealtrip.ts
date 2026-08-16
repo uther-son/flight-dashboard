@@ -229,7 +229,7 @@ export async function fetchSydneyRoutes(today: Date): Promise<FlightDeal[]> {
   for (const candidate of candidates) {
     const departDate = yyyymmddToIso(candidate.departureDate);
     const returnDate = addDays(departDate, SYD_NIGHTS);
-    const deal = await searchFlight('ICN', 'SYD', departDate, returnDate, '호주', false);
+    const deal = await searchFlight('ICN', 'SYD', departDate, returnDate, '시드니', false);
     if (deal) return [deal];
   }
   return [];
