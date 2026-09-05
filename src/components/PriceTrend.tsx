@@ -113,7 +113,7 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
   return (
     <section className="mb-8">
       <h2 className="text-base font-semibold mb-1">📊 가격 추이</h2>
-      <p className="text-xs text-slate-500 mb-3">매일 검색된 최저가 기록 · 쌀 때를 파악하는 그래프</p>
+      <p className="text-xs text-slate-500 mb-3">매일 검색된 최저가 기록 · 저렴할 때를 파악하는 그래프</p>
 
       <div className="space-y-3 mb-3">
         {japanRoutes.length > 0 && (
@@ -169,7 +169,7 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
             </div>
             <p className={`text-[10px] mt-1 ${staleDays >= 3 ? 'text-amber-500' : 'text-slate-600'}`}>
               {staleDays <= 0 ? '오늘' : staleDays === 1 ? '어제' : `${formatShortDate(currentDate)} (${staleDays}일 전)`} 검색 기준
-              {staleDays >= 3 && ' · 최근 이 노선이 안 잡혀 오래된 가격일 수 있어요'}
+              {staleDays >= 3 && ' · 최근 이 노선이 검색되지 않아 오래된 가격일 수 있어요'}
             </p>
           </div>
           <div className="text-right">
