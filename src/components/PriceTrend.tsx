@@ -163,7 +163,7 @@ export function PriceTrend({ history }: { history: FlightHistory }) {
               )}
               {records.length >= 3 && (
                 <p className={`text-xs font-semibold ${isPriceLow ? 'text-emerald-400' : isPriceHigh ? 'text-red-400' : 'text-slate-400'}`}>
-                  {isPriceLow ? '🟢 현재 저렴' : isPriceHigh ? '🔴 현재 비쌈' : '⚪ 보통'}
+                  {isPriceLow ? '🟢 현재 저렴한 편' : isPriceHigh ? '🔴 현재 비싼 편' : '⚪ 보통 수준'}
                 </p>
               )}
             </div>
