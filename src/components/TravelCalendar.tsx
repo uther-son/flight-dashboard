@@ -33,6 +33,25 @@ function addDays(dateStr: string, days: number): string {
   return toDateStr(d);
 }
 
+function isWeekendDay(dateStr: string): boolean {
+  const w = kstWeekday(dateStr);
+  return w === 0 || w === 6;
+}
+
+// 이벤트 시작일 앞에 토·일이 연속으로 붙어있으면 그만큼 앞으로 당김 (예: 화요일 휴가 → 앞이 월요일(평일)이면 안 당김)
+function extendStartOverWeekend(dateStr: string): string {
+  let d = dateStr;
+  while (isWeekendDay(addDays(d, -1))) d = addDays(d, -1);
+  return d;
+}
+
+// 이벤트 종료일 뒤에 토·일이 연속으로 붙어있으면 그만큼 뒤로 늘림 (토요일 하루짜리 공휴일도 다음날 일요일까지 포함됨)
+function extendEndOverWeekend(dateStr: string): string {
+  let d = dateStr;
+  while (isWeekendDay(addDays(d, 1))) d = addDays(d, 1);
+  return d;
+}
+
 function formatDateRange(start: string, end: string) {
   const fmt = (s: string) =>
     parseDate(s).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul' });
@@ -163,12 +182,10 @@ export function TravelCalendar({
   updatedAt?: string;
   japanDeals?: FlightDeal[];
 }) {
-  // 이벤트 앞뒤로 주말이 붙어있으면 여행 가능 구간에 포함 (월요일 휴가면 앞의 토·일까지, 목·금이면 뒤의 주말까지)
+  // 이벤트 앞뒤에 연속된 토·일이 있으면 여행 가능 구간에 포함 (예: 토요일 공휴일 하루도 다음날 일요일까지 묶임)
   const toWindow = (e: CalendarEvent) => {
-    const startDay = kstWeekday(e.startDate);
-    const windowStart = startDay === 1 ? addDays(e.startDate, -2) : startDay === 2 ? addDays(e.startDate, -3) : e.startDate;
-    const endDay = kstWeekday(e.endDate);
-    const windowEnd = endDay === 4 ? addDays(e.endDate, 2) : endDay === 5 ? addDays(e.endDate, 1) : e.endDate;
+    const windowStart = extendStartOverWeekend(e.startDate);
+    const windowEnd = extendEndOverWeekend(e.endDate);
     const nights = Math.round((parseDate(windowEnd).getTime() - parseDate(windowStart).getTime()) / 86400000);
     return { label: e.title, start: windowStart, end: windowEnd, nights };
   };
